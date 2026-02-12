@@ -21,6 +21,7 @@ Unlike typical AI assistants, SERVE:
 - 💾 **Local Conversations** - SQLite database stores your chats locally
 - 🔒 **GitHub Auth** - Secure device flow authentication
 - ✨ **Beautiful Typography** - Markdown support with syntax highlighting
+- 🪟 **Windows Desktop** - Native .exe with auto-updates
 
 ## Getting Started
 
@@ -28,25 +29,51 @@ Unlike typical AI assistants, SERVE:
 
 - Node.js 18+
 - A GitHub account with Copilot access
+- For Windows desktop: Rust toolchain
 
-### Installation
+### Web Version
 
 ```bash
 # Clone the repository
-git clone <repo-url>
-cd SERVE
+git clone https://github.com/KNIGHTABDO/serve.git
+cd serve
 
 # Install dependencies
 npm install
-
-# Copy environment variables
-cp .env.example .env
 
 # Run the development server
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Windows Desktop App
+
+#### Option 1: Download Release (Recommended)
+
+1. Go to [Releases](https://github.com/KNIGHTABDO/serve/releases)
+2. Download `serve-1.0.0-x64.msi` or `serve-1.0.0-x64.zip`
+3. Run the installer
+4. SERVE will auto-update when new versions are released
+
+#### Option 2: Build from Source
+
+```bash
+# Install Rust (if not installed)
+# Download from https://rustup.rs/
+
+# Clone and enter directory
+git clone https://github.com/KNIGHTABDO/serve.git
+cd serve
+
+# Install Tauri CLI
+cargo install tauri-cli
+
+# Build the Windows app
+npm run build:tauri
+
+# Output will be in src-tauri/target/release/bundle/
+```
 
 ### GitHub Authentication
 
@@ -67,10 +94,22 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 - `Enter` - Send message
 - `Shift + Enter` - New line in message
+- `F11` - Toggle fullscreen (desktop only)
+- `Ctrl+W` - Close window (desktop only)
+
+## Auto-Updates
+
+The Windows desktop app automatically checks for updates on startup. When a new version is available:
+- You'll be prompted to update
+- Click "Update" to download and install
+- App will restart with the new version
+
+Manual update check available in Settings.
 
 ## Architecture
 
 - **Framework**: Next.js 16 with App Router
+- **Desktop**: Tauri 2 (Rust + WebView2)
 - **Styling**: Tailwind CSS
 - **Database**: SQLite (Better-sqlite3)
 - **AI**: GitHub Copilot API via device flow
@@ -87,6 +126,10 @@ SERVE/
 │   ├── globals.css    # Global styles
 │   ├── layout.tsx     # Root layout
 │   └── page.tsx       # Landing page
+├── src-tauri/         # Tauri desktop app
+│   ├── src/           # Rust source
+│   ├── icons/         # App icons
+│   └── tauri.conf.json # Tauri configuration
 ├── lib/
 │   ├── auth/          # Authentication logic
 │   ├── db.ts          # Database setup
@@ -97,14 +140,17 @@ SERVE/
 ## Development
 
 ```bash
-# Run dev server
+# Run web dev server
 npm run dev
 
-# Build for production
+# Run Tauri dev (requires Rust)
+npm run dev:tauri
+
+# Build for web
 npm run build
 
-# Start production server
-npm start
+# Build Windows desktop app
+npm run build:tauri
 ```
 
 ## Philosophy

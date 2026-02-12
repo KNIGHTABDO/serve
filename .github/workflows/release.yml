@@ -1,0 +1,52 @@
+name: Build & Release SERVE
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build Next.js
+        run: npm run build
+        
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          target: x86_64-pc-windows-msvc
+          
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2"
+        
+      - name: Build Tauri
+        run: |
+          cargo tauri build --bundles msi,zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: src-tauri/target/release/bundle/**
+          body: |
+            ## Changes
+            - Initial SERVE release
+            - Windows MSI and ZIP packages available
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

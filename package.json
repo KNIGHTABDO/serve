@@ -1,12 +1,16 @@
 {
-  "name": "serve-app",
-  "version": "0.1.0",
+  "name": "serve",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "tauri": "tauri",
+    "dev:tauri": "tauri dev",
+    "build:tauri": "tauri build",
+    "bundle:tauri": "tauri build --bundles msi,zip"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.1.10",

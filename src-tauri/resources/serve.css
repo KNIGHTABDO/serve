@@ -1,0 +1,34 @@
+/* SERVE Desktop Styles - Injected into Tauri window */
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+}
+
+html, body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-mono), monospace;
+}
+
+/* Hide scrollbars in desktop app */
+::-webkit-scrollbar {
+  display: none !important;
+}
+
+* {
+  scrollbar-width: none !important;
+}
+
+/* Remove default browser margins */
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Ensure full height */
+#__next {
+  height: 100vh;
+  overflow: hidden;
+}
