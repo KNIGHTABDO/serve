@@ -1,24 +1,28 @@
 
 'use client';
 
-import { useChat } from 'ai/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AuthModal } from '../components/AuthModal';
 import { Settings, Plus, Trash2, Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
+// Tauri services
+import { isAuthenticated, fetchModels, signOut } from '@/lib/tauri/auth';
+import { streamChat, type ChatMessage } from '@/lib/tauri/chat';
+import * as db from '@/lib/tauri/db';
+
 // Code block component with copy button
 function CodeBlock({ language, children }: { language: string; children: string }) {
   const [copied, setCopied] = useState(false);
-  
+
   const copy = () => {
     navigator.clipboard.writeText(children);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-  
+
   return (
     <div className="relative group">
       <div className="flex items-center justify-between px-4 py-2 bg-[#2a2a2a] rounded-t-lg border-b border-white/5">
@@ -43,27 +47,27 @@ function CodeBlock({ language, children }: { language: string; children: string 
   );
 }
 
+interface UIMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export default function ChatPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedModel, setSelectedModel] = useState('gpt-4o');
-  const [availableModels, setAvailableModels] = useState<{id:string, name:string}[]>([]);
-  const [conversations, setConversations] = useState<{id:string, title:string, updatedAt:string}[]>([]);
+  const [availableModels, setAvailableModels] = useState<{ id: string, name: string }[]>([]);
+  const [conversations, setConversations] = useState<db.Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  
-  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages, error } = useChat({
-    api: '/api/chat',
-    body: { model: selectedModel, conversationId: currentConversationId },
-    onError: (err) => {
-      console.error('Chat error:', err);
-      // Check if it's an auth error and trigger re-auth
-      if (err.message?.includes('Unauthorized') || err.message?.includes('401')) {
-        setAuthenticated(false);
-      }
-    }
-  });
+
+  // Chat state (replaces useChat)
+  const [messages, setMessages] = useState<UIMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -75,14 +79,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (authenticated) {
-      fetch('/api/models')
-        .then(r => r.json())
-        .then(d => {
-          if (d.models && Array.isArray(d.models)) {
-            setAvailableModels(d.models);
-          }
-        })
-        .catch(console.error);
+      fetchModels().then(setAvailableModels).catch(console.error);
     }
   }, [authenticated]);
 
@@ -94,9 +91,8 @@ export default function ChatPage() {
 
   const checkAuth = async () => {
     try {
-      const res = await fetch('/api/auth/github');
-      const data = await res.json();
-      setAuthenticated(data.authenticated);
+      const authed = await isAuthenticated();
+      setAuthenticated(authed);
     } catch (e) {
       console.error(e);
     } finally {
@@ -106,11 +102,8 @@ export default function ChatPage() {
 
   const loadConversations = async () => {
     try {
-      const res = await fetch('/api/conversations');
-      const data = await res.json();
-      if (data.conversations) {
-        setConversations(data.conversations);
-      }
+      const convs = await db.getConversations();
+      setConversations(convs);
     } catch (e) {
       console.error('Failed to load conversations:', e);
     }
@@ -118,13 +111,10 @@ export default function ChatPage() {
 
   const createNewChat = async () => {
     try {
-      const res = await fetch('/api/conversations', { method: 'POST' });
-      const data = await res.json();
-      if (data.conversation) {
-        setCurrentConversationId(data.conversation.id);
-        setMessages([]);
-        loadConversations();
-      }
+      const conv = await db.createConversation(selectedModel);
+      setCurrentConversationId(conv.id);
+      setMessages([]);
+      loadConversations();
     } catch (e) {
       console.error('Failed to create conversation:', e);
     }
@@ -132,27 +122,26 @@ export default function ChatPage() {
 
   const loadConversation = async (id: string) => {
     try {
-      const res = await fetch(`/api/conversations/${id}`);
-      const data = await res.json();
-      if (data.messages) {
-        setMessages(data.messages);
-        setCurrentConversationId(id);
-      }
+      const msgs = await db.getMessages(id);
+      setMessages(msgs.map(m => ({
+        id: m.id,
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      })));
+      setCurrentConversationId(id);
     } catch (e) {
       console.error('Failed to load conversation:', e);
     }
   };
 
-  const deleteConversation = async (id: string, e: React.MouseEvent) => {
+  const deleteConversationHandler = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`/api/conversations/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setConversations(conversations.filter(c => c.id !== id));
-        if (currentConversationId === id) {
-          setCurrentConversationId(null);
-          setMessages([]);
-        }
+      await db.deleteConversation(id);
+      setConversations(conversations.filter(c => c.id !== id));
+      if (currentConversationId === id) {
+        setCurrentConversationId(null);
+        setMessages([]);
       }
     } catch (e) {
       console.error('Failed to delete conversation:', e);
@@ -169,43 +158,100 @@ export default function ChatPage() {
   };
 
   const submitMessage = async () => {
-    // Check auth first
-    if (!authenticated) {
-      setAuthenticated(false);
-      return;
-    }
-    
+    if (!authenticated || !input.trim() || isLoading) return;
+
+    const userMessage = input.trim();
+    setInput('');
+    setError(null);
+    setIsLoading(true);
+
     // Create conversation if needed
     let convId = currentConversationId;
     if (!convId) {
       try {
-        const res = await fetch('/api/conversations', { method: 'POST' });
-        const data = await res.json();
-        if (data.conversation) {
-          convId = data.conversation.id;
-          setCurrentConversationId(convId);
-          loadConversations();
-        }
+        const conv = await db.createConversation(selectedModel);
+        convId = conv.id;
+        setCurrentConversationId(convId);
+        loadConversations();
       } catch (e) {
         console.error('Failed to create conversation:', e);
+        setIsLoading(false);
+        return;
       }
     }
-    
-    // Now submit with the conversation ID
-    handleSubmit(undefined, { body: { model: selectedModel, conversationId: convId } });
+
+    // Add user message to UI immediately
+    const userMsg: UIMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: userMessage,
+    };
+
+    const assistantMsg: UIMessage = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: '',
+    };
+
+    setMessages(prev => [...prev, userMsg, assistantMsg]);
+
+    // Build message history for API
+    const chatMessages: ChatMessage[] = [
+      ...messages.map(m => ({ id: m.id, role: m.role, content: m.content })),
+      { id: userMsg.id, role: 'user' as const, content: userMessage },
+    ];
+
+    // Stream the response
+    await streamChat(
+      chatMessages,
+      selectedModel,
+      convId,
+      // onToken
+      (token) => {
+        setMessages(prev => {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          if (last && last.role === 'assistant') {
+            updated[updated.length - 1] = { ...last, content: last.content + token };
+          }
+          return updated;
+        });
+      },
+      // onDone
+      (_fullResponse) => {
+        setIsLoading(false);
+        loadConversations(); // Refresh sidebar for updated title
+      },
+      // onError
+      (errorMsg) => {
+        setError(errorMsg);
+        setIsLoading(false);
+        if (errorMsg.includes('Unauthorized')) {
+          setAuthenticated(false);
+        }
+        // Remove the empty assistant message
+        setMessages(prev => {
+          const updated = [...prev];
+          if (updated.length > 0 && updated[updated.length - 1].role === 'assistant' && !updated[updated.length - 1].content) {
+            updated.pop();
+          }
+          return updated;
+        });
+      },
+    );
   };
 
   if (loadingAuth) return <div className="bg-[#0a0a0a] h-screen w-screen flex items-center justify-center text-white/20 text-sm">initializing...</div>;
 
   return (
-    <div className="flex h-screen bg-[#0a0a0a] text-white selection:bg-white/10 overflow-hidden">
+    <div className="flex h-full bg-[#0a0a0a] text-white selection:bg-white/10 overflow-hidden">
       {!authenticated && <AuthModal onAuthenticated={() => setAuthenticated(true)} />}
 
       {/* Collapsible Sidebar */}
       <div className={`transition-all duration-300 ease-in-out flex flex-col border-r border-white/5 ${sidebarOpen ? 'w-64' : 'w-12'}`}>
         {/* Logo / Toggle */}
         <div className="h-14 flex items-center px-3 border-b border-white/5">
-          <button 
+          <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="text-xl font-light text-white/80 hover:text-white transition-colors"
             title="SERVE"
@@ -213,7 +259,7 @@ export default function ChatPage() {
             ◈
           </button>
           {sidebarOpen && (
-            <button 
+            <button
               onClick={createNewChat}
               className="ml-auto p-1.5 hover:bg-white/5 rounded transition-colors"
             >
@@ -234,15 +280,14 @@ export default function ChatPage() {
                 <div
                   key={conv.id}
                   onClick={() => loadConversation(conv.id)}
-                  className={`group flex items-center justify-between px-4 py-2 text-sm cursor-pointer transition-colors ${
-                    currentConversationId === conv.id 
-                      ? 'text-white' 
-                      : 'text-white/30 hover:text-white/60'
-                  }`}
+                  className={`group flex items-center justify-between px-4 py-2 text-sm cursor-pointer transition-colors ${currentConversationId === conv.id
+                    ? 'text-white'
+                    : 'text-white/30 hover:text-white/60'
+                    }`}
                 >
                   <span className="truncate flex-1 italic">{conv.title || '...'}</span>
                   <button
-                    onClick={(e) => deleteConversation(conv.id, e)}
+                    onClick={(e) => deleteConversationHandler(conv.id, e)}
                     className="opacity-0 group-hover:opacity-100 p-1 hover:text-white/80 transition-all"
                     title="Delete"
                   >
@@ -260,8 +305,8 @@ export default function ChatPage() {
         {/* Header */}
         <div className="h-12 flex items-center justify-center px-6 relative">
           <span className="text-xs text-white/20 tracking-[0.2em]">SERVE</span>
-          
-          <button 
+
+          <button
             onClick={() => setShowSettings(true)}
             className="absolute right-6 p-2 text-white/20 hover:text-white/60 transition-colors"
           >
@@ -273,13 +318,13 @@ export default function ChatPage() {
         <div className="flex-1 overflow-y-auto px-6 py-8">
           {messages.length === 0 && !error ? (
             <div className="h-full flex items-center justify-center">
-                <div className="text-center text-white/20">
-                  <p className="text-sm">What brings you here?</p>
-                </div>
+              <div className="text-center text-white/20">
+                <p className="text-sm">What brings you here?</p>
+              </div>
             </div>
           ) : (
             <div className="max-w-2xl mx-auto space-y-8">
-              {messages.map((m, index) => (
+              {messages.map((m) => (
                 <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : ''}>
                   {m.role === 'user' ? (
                     <div className="max-w-[85%] text-white/60 text-sm leading-relaxed">{m.content}</div>
@@ -314,14 +359,14 @@ export default function ChatPage() {
                   )}
                 </div>
               ))}
-              {isLoading && (
+              {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !messages[messages.length - 1].content && (
                 <div className="py-6 text-white/20 text-sm italic">
                   ...
                 </div>
               )}
               {error && (
                 <div className="text-sm text-red-400/80 py-2">
-                  {error.message?.includes('Error:') ? error.message : `Error: ${error.message || 'Failed to get response'}`}
+                  {error}
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -338,7 +383,7 @@ export default function ChatPage() {
                 className="w-full bg-transparent border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none overflow-hidden"
                 placeholder="Say something..."
                 value={input}
-                onChange={handleInputChange}
+                onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 rows={1}
                 style={{ minHeight: '48px', maxHeight: '200px' }}
@@ -359,27 +404,26 @@ export default function ChatPage() {
           <div className="bg-[#111] border border-white/10 rounded-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-light">Settings</h2>
-              <button 
+              <button
                 onClick={() => setShowSettings(false)}
                 className="text-white/40 hover:text-white transition-colors"
               >
                 ✕
               </button>
             </div>
-            
+
             <div className="space-y-6">
               <div>
                 <label className="text-xs text-white/40 uppercase tracking-wider mb-3 block">Model</label>
                 <div className="space-y-1">
                   {availableModels.length > 0 ? availableModels.map((m) => (
-                    <button 
+                    <button
                       key={m.id}
                       onClick={() => setSelectedModel(m.id)}
-                      className={`w-full text-left px-3 py-2.5 text-sm rounded-md transition-colors ${
-                        selectedModel === m.id 
-                          ? 'bg-white/10 text-white' 
-                          : 'text-white/50 hover:text-white hover:bg-white/5'
-                      }`}
+                      className={`w-full text-left px-3 py-2.5 text-sm rounded-md transition-colors ${selectedModel === m.id
+                        ? 'bg-white/10 text-white'
+                        : 'text-white/50 hover:text-white hover:bg-white/5'
+                        }`}
                     >
                       {m.name || m.id}
                     </button>
@@ -390,9 +434,9 @@ export default function ChatPage() {
               </div>
 
               <div className="pt-4 border-t border-white/5">
-                <button 
+                <button
                   onClick={async () => {
-                    await fetch('/api/auth/signout', { method: 'POST' });
+                    await signOut();
                     setAuthenticated(false);
                     setMessages([]);
                     setCurrentConversationId(null);

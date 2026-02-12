@@ -3,6 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { Loader2, Copy, Check, ExternalLink, Github } from 'lucide-react';
+import { startDeviceFlow, checkTokenStatus } from '@/lib/tauri/auth';
+import { open } from '@tauri-apps/plugin-shell';
 
 interface AuthModalProps {
   onAuthenticated: () => void;
@@ -19,14 +21,11 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/auth/github', { method: 'POST' });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      
+      const data = await startDeviceFlow();
       setDeviceData({
         user_code: data.userCode,
         verification_uri: data.verificationUri,
-        device_code: data.deviceCode
+        device_code: data.deviceCode,
       });
       setStep('device');
     } catch (err: any) {
@@ -36,24 +35,20 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
     }
   };
 
-  // Dynamic Polling with Recursive setTimeout
+  // Dynamic polling with recursive setTimeout
   useEffect(() => {
-    let pollTimeout: NodeJS.Timeout;
+    let pollTimeout: ReturnType<typeof setTimeout>;
     let isActive = true;
 
     const poll = async (delay: number) => {
       if (!isActive || step !== 'device') return;
-      
-      console.log(`Polling... (delay: ${delay}ms)`);
+
       try {
-        const res = await fetch('/api/auth/github/poll', { method: 'POST' });
-        const data = await res.json();
-        
+        const data = await checkTokenStatus();
         if (!isActive) return;
 
-        // Handle Slow Down or Continue Pending
         let nextDelay = 5000;
-        
+
         if (data.status === 'success' || data.access_token) {
           setStep('success');
           setTimeout(() => onAuthenticated(), 1000);
@@ -61,33 +56,27 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
         }
 
         if (data.status === 'slow_down') {
-          // Add 5 seconds to interval as requested by GH, but keep checking
-          nextDelay = 10000; 
-          console.log(`Slow down received. Increasing delay to ${nextDelay}ms`);
+          nextDelay = 10000;
         } else if (data.status === 'pending') {
           nextDelay = 5000;
         } else if (data.status === 'expired') {
-           setError('Code expired. Please try again.');
-           setStep('start');
-           return;
+          setError('Code expired. Please try again.');
+          setStep('start');
+          return;
         } else if (data.status === 'error') {
-           setError(data.error);
-           setStep('start');
-           return;
+          setError(data.error || 'Unknown error');
+          setStep('start');
+          return;
         }
 
-        // Schedule next poll
         pollTimeout = setTimeout(() => poll(nextDelay), nextDelay);
-
       } catch (e) {
         console.error("Poll error", e);
-        // Retry on network error after standard delay
         pollTimeout = setTimeout(() => poll(5000), 5000);
       }
     };
 
     if (step === 'device') {
-      // Start initial poll after 5s
       pollTimeout = setTimeout(() => poll(5000), 5000);
     }
 
@@ -105,6 +94,14 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
     }
   };
 
+  const openLink = async (url: string) => {
+    try {
+      await open(url);
+    } catch {
+      window.open(url, '_blank');
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-[#111] border border-white/10 p-8 rounded-2xl w-full max-w-md shadow-2xl">
@@ -112,7 +109,7 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
           <div className="p-4 bg-white/5 rounded-full">
             <Github className="w-8 h-8 text-white" />
           </div>
-          
+
           <h2 className="text-2xl font-light tracking-wide text-white">
             {step === 'start' && "Connect Copilot"}
             {step === 'device' && "Authorize Device"}
@@ -143,7 +140,7 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
                   <code className="text-xl font-mono text-blue-400 tracking-wider">
                     {deviceData.user_code}
                   </code>
-                  <button 
+                  <button
                     onClick={copyCode}
                     className="p-2 hover:bg-white/10 rounded-md transition-colors"
                   >
@@ -156,16 +153,14 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
                 <p className="text-sm text-white/60">
                   Copy the code above, then authorize via GitHub:
                 </p>
-                <a
-                  href={deviceData.verification_uri}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => openLink(deviceData.verification_uri)}
                   className="block w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                 >
                   Open GitHub Activation <ExternalLink className="w-4 h-4" />
-                </a>
+                </button>
               </div>
-              
+
               <div className="flex items-center justify-center gap-2 text-xs text-white/30">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 Waiting for authorization...

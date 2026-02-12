@@ -1,16 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono, Inter } from "next/font/google";
 import "./globals.css";
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-});
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
+import { TitleBar } from "./components/TitleBar";
 
 export const metadata: Metadata = {
   title: "SERVE — AI that sees patterns",
@@ -35,11 +25,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+      </head>
       <body
-        className={`${jetbrainsMono.variable} ${inter.variable} antialiased bg-black text-white`}
+        className="antialiased bg-black text-white flex flex-col h-screen overflow-hidden"
+        style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
       >
-        {children}
+        <TitleBar />
+        <div className="flex-1 overflow-hidden">
+          {children}
+        </div>
       </body>
     </html>
   );
 }
+

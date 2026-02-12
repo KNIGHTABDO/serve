@@ -1,0 +1,51 @@
+{
+    "identifier": "default",
+    "description": "Default capability for SERVE desktop app",
+    "windows": [
+        "main"
+    ],
+    "permissions": [
+        "core:default",
+        "shell:allow-open",
+        "http:default",
+        {
+            "identifier": "http:allow-fetch",
+            "allow": [
+                {
+                    "url": "https://github.com/**"
+                },
+                {
+                    "url": "https://api.github.com/**"
+                },
+                {
+                    "url": "https://api.githubcopilot.com/**"
+                }
+            ]
+        },
+        {
+            "identifier": "http:allow-fetch-send",
+            "allow": [
+                {
+                    "url": "https://github.com/**"
+                },
+                {
+                    "url": "https://api.github.com/**"
+                },
+                {
+                    "url": "https://api.githubcopilot.com/**"
+                }
+            ]
+        },
+        "sql:default",
+        "sql:allow-load",
+        "sql:allow-execute",
+        "sql:allow-select",
+        "sql:allow-close",
+        "store:default",
+        "store:allow-get",
+        "store:allow-set",
+        "store:allow-delete",
+        "store:allow-save",
+        "store:allow-load"
+    ]
+}

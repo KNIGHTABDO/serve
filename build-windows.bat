@@ -1,9 +1,9 @@
 @echo off
-REM SERVE Windows Build Setup Script
-REM Run this to set up Rust and build the Windows app
+REM SERVE Windows Build Script
+REM Builds the Windows desktop app using Tauri v2
 
 echo ========================================
-echo SERVE - Windows Desktop Build Setup
+echo SERVE - Windows Desktop Build
 echo ========================================
 
 REM Check if Node.js is installed
@@ -12,51 +12,36 @@ if errorlevel 1 (
     echo [ERROR] Node.js is not installed. Please install from https://nodejs.org/
     exit /b 1
 )
-
 echo [OK] Node.js found
 
 REM Check if Rust is installed
 rustc --version >nul 2>&1
 if errorlevel 1 (
-    echo [INFO] Rust not found. Installing...
-    
-    echo Downloading rustup...
-    powershell -Command "& {Invoke-WebRequest -Uri https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe -OutFile rustup-init.exe}"
-    
-    echo Installing Rust...
-    rustup-init.exe -y --default-toolchain stable --target x86_64-pc-windows-msvc
-    
-    echo Cleaning up...
-    del rustup-init.exe
-    
-    echo [OK] Rust installed
-) else (
-    echo [OK] Rust found
+    echo [ERROR] Rust is not installed.
+    echo Install from https://rustup.rs/
+    exit /b 1
 )
-
-REM Install Tauri CLI
-echo [INFO] Installing Tauri CLI...
-cargo install tauri-cli --version "^2"
+echo [OK] Rust found
 
 REM Install npm dependencies
 echo [INFO] Installing npm dependencies...
-npm ci
+call npm ci
 
-REM Build Next.js
-echo [INFO] Building Next.js...
-npm run build
+REM Build with Tauri (this automatically runs beforeBuildCommand which builds Next.js)
+echo [INFO] Building Windows app with Tauri...
+call npm run build:tauri
 
-REM Build Tauri
-echo [INFO] Building Windows app...
-cargo tauri build --bundles msi,zip
+if errorlevel 1 (
+    echo [ERROR] Build failed!
+    exit /b 1
+)
 
 echo ========================================
 echo Build complete!
 echo ========================================
 echo.
-echo Output files:
-echo   - src-tauri/target/release/bundle/msi/SERVE_1.0.0_x64.msi
-echo   - src-tauri/target/release/bundle/zip/SERVE_1.0.0_x64.zip
+echo Output files should be in:
+echo   src-tauri\target\release\bundle\nsis\
+echo   src-tauri\target\release\bundle\msi\
 echo.
-echo Run 'cargo tauri dev' to test the app.
 echo ========================================
