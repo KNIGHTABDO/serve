@@ -2,59 +2,65 @@
 
 import { useState, useEffect } from 'react';
 
-// Only import Tauri APIs when running in Tauri
-let tauriWindow: any = null;
 
 export function TitleBar() {
     const [isTauri, setIsTauri] = useState(false);
     const [isMaximized, setIsMaximized] = useState(false);
+    const [appWindow, setAppWindow] = useState<any>(null);
 
     useEffect(() => {
-        // Detect Tauri environment
-        if (typeof window !== 'undefined' && '__TAURI__' in window) {
+        // Check if running in Tauri environment
+        // We check for __TAURI_INTERNALS__ which is the v2 indicator, or fall back to __TAURI__ for v1 compatibility
+        const isTauriEnv = typeof window !== 'undefined' &&
+            ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
+
+        if (isTauriEnv) {
             setIsTauri(true);
-            import('@tauri-apps/api/window').then((mod) => {
-                tauriWindow = mod;
-                // Check initial maximized state
-                mod.getCurrentWindow().isMaximized().then(setIsMaximized);
+
+            // Dynamically import Tauri module to avoid SSR/Browser issues
+            import('@tauri-apps/api/window').then((module) => {
+                const win = module.getCurrentWindow();
+                setAppWindow(win);
+                win.isMaximized().then(setIsMaximized);
+            }).catch(err => {
+                console.error("Failed to load Tauri window module:", err);
+                setIsTauri(false);
             });
         }
     }, []);
 
     if (!isTauri) return null;
 
-    const handleMinimize = async () => {
-        await tauriWindow?.getCurrentWindow().minimize();
+    const handleMinimize = () => {
+        appWindow?.minimize();
     };
 
     const handleMaximize = async () => {
-        const win = tauriWindow?.getCurrentWindow();
-        if (!win) return;
-        await win.toggleMaximize();
-        setIsMaximized(await win.isMaximized());
+        if (!appWindow) return;
+        await appWindow.toggleMaximize();
+        setIsMaximized(await appWindow.isMaximized());
     };
 
-    const handleClose = async () => {
-        await tauriWindow?.getCurrentWindow().close();
+    const handleClose = () => {
+        appWindow?.close();
     };
 
     return (
-        <div
-            data-tauri-drag-region
-            className="h-8 flex items-center justify-between select-none bg-[#0a0a0a] border-b border-white/5 shrink-0"
-            style={{ WebkitAppRegion: 'drag' } as any}
-        >
-            {/* Left: app icon */}
-            <div className="flex items-center pl-3 pointer-events-none">
-                <span className="text-[10px] text-white/20 tracking-[0.15em] uppercase">SERVE</span>
+        <div className="h-8 flex items-center justify-between select-none bg-[#0a0a0a] border-b border-white/5 shrink-0 relative">
+            {/* Drag Region (Title + Spacer) */}
+            <div
+                data-tauri-drag-region
+                className="flex-1 h-full flex items-center pl-3"
+            >
+                <img src="/logo.png" alt="SERVE" className="h-4 w-auto opacity-60 hover:opacity-100 transition-opacity" />
             </div>
 
-            {/* Right: window controls */}
-            <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' } as any}>
+            {/* Right: window controls (No Drag) */}
+            <div className="flex items-center h-full z-10">
                 {/* Minimize */}
                 <button
                     onClick={handleMinimize}
-                    className="h-full px-3 hover:bg-white/10 transition-colors flex items-center justify-center"
+                    className="h-full px-3 hover:bg-white/10 transition-colors flex items-center justify-center cursor-default"
                     title="Minimize"
                 >
                     <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor" className="text-white/50">
@@ -65,7 +71,7 @@ export function TitleBar() {
                 {/* Maximize / Restore */}
                 <button
                     onClick={handleMaximize}
-                    className="h-full px-3 hover:bg-white/10 transition-colors flex items-center justify-center"
+                    className="h-full px-3 hover:bg-white/10 transition-colors flex items-center justify-center cursor-default"
                     title={isMaximized ? "Restore" : "Maximize"}
                 >
                     {isMaximized ? (
@@ -83,7 +89,7 @@ export function TitleBar() {
                 {/* Close */}
                 <button
                     onClick={handleClose}
-                    className="h-full px-3 hover:bg-red-500/80 transition-colors flex items-center justify-center"
+                    className="h-full px-3 hover:bg-red-500/80 transition-colors flex items-center justify-center cursor-default"
                     title="Close"
                 >
                     <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.2" className="text-white/50 hover:text-white">

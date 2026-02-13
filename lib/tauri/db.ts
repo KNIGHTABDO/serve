@@ -3,12 +3,18 @@
  * Replaces server-side lib/db.ts and all /api/conversations/* routes
  */
 
-import Database from '@tauri-apps/plugin-sql';
+'use client';
 
-let db: Database | null = null;
+import { isTauri } from './env';
 
-async function getDb(): Promise<Database> {
+let db: any = null;
+
+async function getDb(): Promise<any | null> {
+    if (!isTauri()) return null;
+
     if (!db) {
+        const sqlModule = await import('@tauri-apps/plugin-sql');
+        const Database = sqlModule.default;
         db = await Database.load('sqlite:serve.db');
 
         // Initialize tables
@@ -64,22 +70,27 @@ export interface Message {
 
 export async function getConversations(): Promise<Conversation[]> {
     const database = await getDb();
-    return await database.select<Conversation[]>(
+    if (!database) return [];
+    return await database.select(
         'SELECT id, title, model, created_at, updated_at FROM conversations ORDER BY updated_at DESC'
-    );
+    ) as Conversation[];
 }
 
 export async function getConversation(id: string): Promise<Conversation | null> {
     const database = await getDb();
-    const rows = await database.select<Conversation[]>(
+    if (!database) return null;
+    const rows = await database.select(
         'SELECT id, title, model, created_at, updated_at FROM conversations WHERE id = ?',
         [id]
-    );
+    ) as Conversation[];
     return rows[0] || null;
 }
 
 export async function createConversation(model: string = 'gpt-4o'): Promise<Conversation> {
     const database = await getDb();
+    if (!database) {
+        return { id: generateId(), title: null, model, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    }
     const id = generateId();
     await database.execute(
         'INSERT INTO conversations (id, title, model) VALUES (?, ?, ?)',
@@ -90,6 +101,7 @@ export async function createConversation(model: string = 'gpt-4o'): Promise<Conv
 
 export async function updateConversationTitle(id: string, title: string) {
     const database = await getDb();
+    if (!database) return;
     await database.execute(
         'UPDATE conversations SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [title, id]
@@ -98,6 +110,7 @@ export async function updateConversationTitle(id: string, title: string) {
 
 export async function updateConversationTimestamp(id: string) {
     const database = await getDb();
+    if (!database) return;
     await database.execute(
         'UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [id]
@@ -106,6 +119,7 @@ export async function updateConversationTimestamp(id: string) {
 
 export async function deleteConversation(id: string) {
     const database = await getDb();
+    if (!database) return;
     await database.execute('DELETE FROM messages WHERE conversation_id = ?', [id]);
     await database.execute('DELETE FROM conversations WHERE id = ?', [id]);
 }
@@ -113,15 +127,17 @@ export async function deleteConversation(id: string) {
 // Messages
 export async function getMessages(conversationId: string): Promise<Message[]> {
     const database = await getDb();
-    return await database.select<Message[]>(
+    if (!database) return [];
+    return await database.select(
         'SELECT id, conversation_id, role, content, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at ASC',
         [conversationId]
-    );
+    ) as Message[];
 }
 
 export async function createMessage(conversationId: string, role: string, content: string): Promise<string> {
     const database = await getDb();
     const id = generateId();
+    if (!database) return id;
     await database.execute(
         'INSERT INTO messages (id, conversation_id, role, content) VALUES (?, ?, ?, ?)',
         [id, conversationId, role, content]

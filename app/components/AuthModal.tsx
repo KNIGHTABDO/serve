@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { Loader2, Copy, Check, ExternalLink, Github } from 'lucide-react';
 import { startDeviceFlow, checkTokenStatus } from '@/lib/tauri/auth';
-import { open } from '@tauri-apps/plugin-shell';
 
 interface AuthModalProps {
   onAuthenticated: () => void;
@@ -96,6 +95,7 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
 
   const openLink = async (url: string) => {
     try {
+      const { open } = await import('@tauri-apps/plugin-shell');
       await open(url);
     } catch {
       window.open(url, '_blank');

@@ -3,8 +3,9 @@
  * Replaces server-side lib/auth/* and all /api/auth/* routes
  */
 
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
-import { load } from '@tauri-apps/plugin-store';
+'use client';
+
+import { isTauri } from './env';
 
 const CLIENT_ID = 'Iv1.b507a08c87ecfe98'; // Standard GitHub Copilot Client ID
 const USER_AGENT = 'GithubCopilot/1.155.0';
@@ -19,23 +20,45 @@ interface AuthProfile {
     updatedAt: number;
 }
 
+let storeModule: any = null;
+let httpModule: any = null;
+
+async function loadModules() {
+    if (!storeModule) {
+        storeModule = await import('@tauri-apps/plugin-store');
+    }
+    if (!httpModule) {
+        httpModule = await import('@tauri-apps/plugin-http');
+    }
+}
+
 async function getStore() {
-    return await load(STORE_FILE);
+    if (!isTauri()) return null;
+    await loadModules();
+    return await storeModule.load(STORE_FILE);
+}
+
+async function getTauriFetch() {
+    await loadModules();
+    return httpModule.fetch;
 }
 
 async function getProfile(): Promise<AuthProfile | null> {
     const store = await getStore();
-    return (await store.get<AuthProfile>('profile')) ?? null;
+    if (!store) return null;
+    return (await store.get('profile') as AuthProfile) ?? null;
 }
 
 async function saveProfile(profile: AuthProfile) {
     const store = await getStore();
+    if (!store) return;
     await store.set('profile', { ...profile, updatedAt: Date.now() });
     await store.save();
 }
 
 // Check if currently authenticated
 export async function isAuthenticated(): Promise<boolean> {
+    if (!isTauri()) return false;
     const profile = await getProfile();
     return !!profile && profile.status === 'active' && !!profile.token;
 }
@@ -46,6 +69,7 @@ export async function startDeviceFlow(): Promise<{
     verificationUri: string;
     deviceCode: string;
 }> {
+    const tauriFetch = await getTauriFetch();
     const response = await tauriFetch('https://github.com/login/device/code', {
         method: 'POST',
         headers: {
@@ -100,6 +124,7 @@ export async function checkTokenStatus(): Promise<{
         return { status: 'error', error: 'No pending device code found' };
     }
 
+    const tauriFetch = await getTauriFetch();
     const response = await tauriFetch('https://github.com/login/oauth/access_token', {
         method: 'POST',
         headers: {
@@ -137,6 +162,7 @@ async function getRuntimeToken(): Promise<{ token: string; expires_at: number }>
         throw new Error('AUTH_REQUIRED');
     }
 
+    const tauriFetch = await getTauriFetch();
     const response = await tauriFetch('https://api.github.com/copilot_internal/v2/token', {
         headers: {
             Authorization: `Bearer ${profile.token}`,
@@ -183,6 +209,7 @@ export async function fetchModels(): Promise<{ id: string; name: string }[]> {
 // Sign out
 export async function signOut() {
     const store = await getStore();
+    if (!store) return;
     await store.delete('profile');
     await store.save();
 }

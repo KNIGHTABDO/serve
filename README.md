@@ -12,6 +12,8 @@ SERVE is a minimalist, local-first AI desktop application powered by GitHub Copi
 - 💾 **Local-First** - All conversations stored in a local SQLite database (`serve.db`).
 - 🚀 **True Desktop App** - Single `.exe` file, no bundled server, no terminal window.
 - ✨ **Beautiful Typography** - Markdown support with syntax highlighting.
+- 🎬 **Cinematic Video Background** - Full-screen looping video on the landing and loading screens.
+- ♾️ **Metallic Infinity Logo** - New brand identity with a dark-to-silver infinity symbol across the app.
 
 ## Architecture
 

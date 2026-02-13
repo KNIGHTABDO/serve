@@ -3,7 +3,8 @@
  * Replaces server-side /api/chat route
  */
 
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+'use client';
+
 import { getAuthHeaders } from './auth';
 import { createMessage, updateConversationTimestamp } from './db';
 
@@ -97,6 +98,8 @@ export async function streamChat(
 
         const headers = await getAuthHeaders();
 
+        const httpModule = await import('@tauri-apps/plugin-http');
+        const tauriFetch = httpModule.fetch;
         const response = await tauriFetch('https://api.githubcopilot.com/chat/completions', {
             method: 'POST',
             headers: {
