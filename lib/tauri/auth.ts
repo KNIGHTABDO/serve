@@ -191,18 +191,49 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
     };
 }
 
-// Fetch available models
+// Fetch available models from Copilot API
 export async function fetchModels(): Promise<{ id: string; name: string }[]> {
     try {
-        await getRuntimeToken(); // Verify token works
+        const headers = await getAuthHeaders();
+        const httpModule = await import('@tauri-apps/plugin-http');
+        const tauriFetch = httpModule.fetch;
+
+        // Try the new GitHub Models API catalog
+        // Note: This endpoint might vary based on user's specific access, so we handle failures gracefully
+        const response = await tauriFetch('https://api.githubcopilot.com/models', {
+            method: 'GET',
+            headers: {
+                ...headers,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data && Array.isArray(data.data)) {
+                return data.data.map((m: any) => ({
+                    id: m.id,
+                    name: m.name || m.id,
+                }));
+            }
+        }
+
+        // Fallback: If API fails (common with different enterprise/pro tiers), return the known high-value models
+        // These are the current flagship models supported by Copilot as of Feb 2026
         return [
-            { id: 'gpt-4o', name: 'GPT-4o (Copilot)' },
-            { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet (Copilot)' },
-            { id: 'gpt-4', name: 'GPT-4 (Copilot)' },
-            { id: 'o1-preview', name: 'o1 Preview (Copilot)' },
+            { id: 'gpt-4o', name: 'GPT-4o' },
+            { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
+            { id: 'gpt-4', name: 'GPT-4' },
+            { id: 'o1-preview', name: 'o1-preview' },
+            { id: 'o1-mini', name: 'o1-mini' },
         ];
-    } catch {
-        return [];
+    } catch (e) {
+        console.error('Failed to fetch models:', e);
+        // Absolute fallback if everything fails
+        return [
+            { id: 'gpt-4o', name: 'GPT-4o' },
+            { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
+        ];
     }
 }
 

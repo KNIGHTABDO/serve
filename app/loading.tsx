@@ -20,7 +20,7 @@ export default function Loading() {
             <div className="fixed inset-0 bg-black/70 -z-10" />
 
             <div className="flex flex-col items-center gap-4 z-10 animate-pulse">
-                <img src="/logo.png" alt="Loading..." className="w-12 h-12 opacity-80" />
+                <img src="/logo.png" alt="Loading..." className="w-32 h-32 opacity-90 drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]" />
             </div>
         </div>
     );

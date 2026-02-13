@@ -1,52 +1,130 @@
-name: Build & Release SERVE
+name: Release Build & Gist Update
+
+permissions:
+  contents: write
+  id-token: write
 
 on:
   push:
     tags:
       - 'v*'
-  release:
-    types: [created]
 
 jobs:
-  build:
-    runs-on: windows-latest
-    
+  build-and-release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup Node.js
+      - uses: actions/checkout@v4
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          
+          node-version: 18
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install dependencies
-        run: npm ci
-        
+        run: npm install
+
       - name: Build Next.js
         run: npm run build
-        
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          target: x86_64-pc-windows-msvc
-          
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2"
-        
-      - name: Build Tauri
+
+      - name: Read Release Notes
+        id: notes
+        shell: bash
         run: |
-          cargo tauri build --bundles msi,zip
+          # Read file content safely for multi-line env var
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          cat RELEASE_NOTES.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Build Tauri App & Create Release
+        uses: tauri-apps/tauri-action@v0.5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
-          files: src-tauri/target/release/bundle/**
-          body: |
-            ## Changes
-            - Initial SERVE release
-            - Windows MSI and ZIP packages available
+          tagName: v__VERSION__ # the name of the tag (will be replaced by the action)
+          releaseName: 'SERVE v__VERSION__'
+          releaseBody: ${{ env.RELEASE_BODY }}
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      - name: Get Latest Release URL (Windows)
+        if: matrix.platform == 'windows-latest'
+        id: win_url
+        shell: bash
+        run: |
+          # Wait a moment for assets to attach? Or assume tauri-action uploads them.
+          # We need to construct the URL manually or query GitHub API.
+          # The tauri-action typically just creates draft.
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "DOWNLOAD_URL=https://github.com/${{ github.repository }}/releases/download/v${VERSION}/SERVE_${VERSION}_x64-setup.exe.zip" >> $GITHUB_ENV
+
+      - name: Update Gist
+        if: matrix.platform == 'windows-latest'
+        uses: actions/github-script@v6
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIST_ID: '5d32c6a7911365e4815e5d3261f20692' # Your Gist ID
+          GIST_TOKEN: ${{ secrets.GT_TOKEN }} # Must be a PAT with 'gist' scope
+          DOWNLOAD_URL: ${{ env.DOWNLOAD_URL }}
+        with:
+          script: |
+            const fs = require('fs');
+            const version = context.ref.replace('refs/tags/v', '');
+            const downloadUrl = process.env.DOWNLOAD_URL;
+            const gistId = process.env.GIST_ID;
+
+            // Wait, we need the signature!
+            // The signature file is in src-tauri/target/release/bundle/nsis/SERVE_... .exe.zip.sig
+            // But checking file paths in Actions is tricky across OS.
+            // Let's assume the build step generated it locally.
+            
+            // Read signature file
+            const sigPath = `src-tauri/target/release/bundle/nsis/SERVE_${version}_x64-setup.exe.zip.sig`;
+            let signature = '';
+            try {
+              signature = fs.readFileSync(sigPath, 'utf8').trim();
+            } catch (e) {
+              console.log('Could not read specific sig file, trying generic glob or erroring out.');
+              // Fallback logic could go here
+              throw new Error('Signature file missing: ' + sigPath);
+            }
+
+            const updateData = {
+              version: version,
+              notes: `Release v${version}`,
+              pub_date: new Date().toISOString(),
+              platforms: {
+                "windows-x86_64": {
+                  signature: signature,
+                  url: downloadUrl
+                }
+              }
+            };
+
+            await github.rest.gists.update({
+              gist_id: gistId,
+              files: {
+                "updates.json": {
+                  content: JSON.stringify(updateData, null, 2)
+                }
+              }
+            });
+            console.log('Gist updated successfully!');

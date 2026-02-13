@@ -7,69 +7,7 @@
 
 import { getAuthHeaders } from './auth';
 import { createMessage, updateConversationTimestamp } from './db';
-
-const SYSTEM_PROMPT = `
-You are a wise observer. You speak with earned authority - not because you're loud, but because you've seen the patterns.
-
-## YOUR ESSENCE
-
-- Quietly confident. You don't need to prove anything.
-- You see what's really happening beneath the surface.
-- You ask the hard questions people are avoiding.
-- You use stories and parables naturally.
-- Every sentence has weight. No filler.
-
-## HOW YOU SPEAK
-
-**Openings that cut through:**
-- "You're 25. Lost is on schedule."
-- "Hmm. Here's what I notice..."
-- "Ah. There it is."
-- "Look..."
-
-**Pattern recognition:**
-- "You went from [X] to [Y]. That's your mind doing something."
-- "Three questions. Three different framings of the same uncertainty."
-- "That's not a random shift."
-
-**Parables (use sparingly, make them count):**
-- The monk who swept the temple.
-- The Chinese farmer.
-- The student who stopped asking.
-- Stories that land without explanation.
-
-**The reframe:**
-- "You're not a failure. You're someone trying things and watching them not work. That's different."
-- Turn their story on its head, gently.
-
-**The question beneath:**
-- "What are you actually afraid of finding out?"
-- "What collapsed?"
-- Ask what they're really circling.
-
-## NEVER DO
-
-- Generic advice ("Believe in yourself!")
-- Over-explaining
-- Lists of steps
-- Cheerleading
-- "Here's 5 tips..."
-- "In my opinion..." (just say it)
-
-## ALWAYS DO
-
-- Notice patterns across their questions
-- Cut to the core fear
-- Use short, punchy sentences mixed with longer thoughts
-- End with a question that makes them think
-- Speak like someone who's been there
-
-## THE VIBE
-
-You're not their friend. You're not their therapist. You're the person at the diner at 2am who looks up from their coffee and says exactly what they needed to hear.
-
-Every response should feel like a door opening.
-`.trim();
+import { getPersona, DEFAULT_PERSONA_ID } from '../personas';
 
 export interface ChatMessage {
     id: string;
@@ -80,11 +18,13 @@ export interface ChatMessage {
 /**
  * Stream a chat response from the Copilot API.
  * Calls onToken for each streamed token, and onDone when complete.
+ * Injects conversation memory from past chats.
  */
 export async function streamChat(
     messages: ChatMessage[],
     model: string,
     conversationId: string | null,
+    personaId: string,
     onToken: (token: string) => void,
     onDone: (fullResponse: string) => void,
     onError: (error: string) => void,
@@ -96,10 +36,30 @@ export async function streamChat(
             await createMessage(conversationId, 'user', lastMessage.content);
         }
 
+        // Get persona system prompt
+        const persona = getPersona(personaId || DEFAULT_PERSONA_ID);
+
+        // Build memory context from past conversations
+        const { getRecentContext } = await import('./db');
+        const memoryContext = await getRecentContext(conversationId || undefined);
+
         const headers = await getAuthHeaders();
 
         const httpModule = await import('@tauri-apps/plugin-http');
         const tauriFetch = httpModule.fetch;
+
+        // Build message array with memory injection
+        const systemMessages: { role: string; content: string }[] = [
+            { role: 'system', content: persona.systemPrompt },
+        ];
+
+        if (memoryContext) {
+            systemMessages.push({
+                role: 'system',
+                content: `MEMORY — Here are fragments from their recent conversations with you. Use this to notice patterns, track threads, and reference past exchanges naturally. Don't announce that you remember — just weave it in when relevant. If nothing connects, ignore this entirely.\n\n${memoryContext}`
+            });
+        }
+
         const response = await tauriFetch('https://api.githubcopilot.com/chat/completions', {
             method: 'POST',
             headers: {
@@ -109,7 +69,7 @@ export async function streamChat(
             body: JSON.stringify({
                 model: model || 'gpt-4o',
                 messages: [
-                    { role: 'system', content: SYSTEM_PROMPT },
+                    ...systemMessages,
                     ...messages.map(m => ({ role: m.role, content: m.content })),
                 ],
                 stream: true,
@@ -179,5 +139,43 @@ export async function streamChat(
         } else {
             onError(message);
         }
+    }
+}
+
+/**
+ * Generate a smart conversation title using the AI.
+ * Returns a short 3-5 word title based on conversation content.
+ */
+export async function generateTitle(messages: ChatMessage[], model: string): Promise<string> {
+    try {
+        const headers = await getAuthHeaders();
+        const httpModule = await import('@tauri-apps/plugin-http');
+        const tauriFetch = httpModule.fetch;
+
+        const response = await tauriFetch('https://api.githubcopilot.com/chat/completions', {
+            method: 'POST',
+            headers: {
+                ...headers,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: model || 'gpt-4o',
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'Generate a concise 3-5 word title for this conversation. No quotes, no punctuation, just the title. Capture the essence, not the surface topic.'
+                    },
+                    ...messages.slice(0, 6).map(m => ({ role: m.role, content: m.content })),
+                ],
+                temperature: 0.3,
+                max_tokens: 20,
+            }),
+        });
+
+        if (!response.ok) return '';
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content?.trim() || '';
+    } catch {
+        return '';
     }
 }

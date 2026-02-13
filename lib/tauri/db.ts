@@ -157,3 +157,75 @@ export async function createMessage(conversationId: string, role: string, conten
 
     return id;
 }
+
+// Search conversations by title or message content
+export async function searchConversations(query: string): Promise<Conversation[]> {
+    const database = await getDb();
+    if (!database || !query.trim()) return [];
+    const pattern = `%${query}%`;
+    return await database.select(
+        `SELECT DISTINCT c.id, c.title, c.model, c.created_at, c.updated_at
+         FROM conversations c
+         LEFT JOIN messages m ON m.conversation_id = c.id
+         WHERE c.title LIKE ? OR m.content LIKE ?
+         ORDER BY c.updated_at DESC
+         LIMIT 20`,
+        [pattern, pattern]
+    ) as Conversation[];
+}
+
+// Get recent conversation context for memory injection
+// Returns a summary of recent conversations (last N messages from each of the last M conversations)
+export async function getRecentContext(excludeConversationId?: string): Promise<string> {
+    const database = await getDb();
+    if (!database) return '';
+
+    // Get last 5 conversations (excluding current)
+    const convs = excludeConversationId
+        ? await database.select(
+            'SELECT id, title, updated_at FROM conversations WHERE id != ? ORDER BY updated_at DESC LIMIT 5',
+            [excludeConversationId]
+        ) as Conversation[]
+        : await database.select(
+            'SELECT id, title, updated_at FROM conversations ORDER BY updated_at DESC LIMIT 5'
+        ) as Conversation[];
+
+    if (convs.length === 0) return '';
+
+    const summaries: string[] = [];
+    for (const conv of convs) {
+        const msgs = await database.select(
+            'SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 4',
+            [conv.id]
+        ) as { role: string; content: string }[];
+
+        if (msgs.length > 0) {
+            const preview = msgs.reverse().map(m =>
+                `${m.role === 'user' ? 'They' : 'You'}: ${m.content.slice(0, 150)}${m.content.length > 150 ? '...' : ''}`
+            ).join('\n');
+            summaries.push(`[${conv.title || 'Untitled'} — ${conv.updated_at}]\n${preview}`);
+        }
+    }
+
+    return summaries.join('\n\n');
+}
+
+// Export a conversation as markdown text
+export async function exportConversation(conversationId: string): Promise<string> {
+    const conv = await getConversation(conversationId);
+    const msgs = await getMessages(conversationId);
+    if (!conv) return '';
+
+    let md = `# ${conv.title || 'Untitled Conversation'}\n`;
+    md += `*${conv.created_at}*\n\n---\n\n`;
+
+    for (const m of msgs) {
+        if (m.role === 'user') {
+            md += `**You:** ${m.content}\n\n`;
+        } else {
+            md += `${m.content}\n\n---\n\n`;
+        }
+    }
+
+    return md;
+}

@@ -45,3 +45,13 @@ next-env.d.ts
 src-tauri/target/
 src-tauri/gen/
 src-tauri/Cargo.lock
+
+# Signing Keys
+.tauri/*.key
+keyInput.txt
+keyOutput.txt
+scripts/generate-keys.js
+
+# Build Artifacts
+src-tauri/target/
+src-tauri/gen/
