@@ -671,11 +671,12 @@ export default function ChatPage() {
       </div>
 
       {/* Settings Modal */}
+      {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#111] border border-white/10 rounded-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-light">Settings</h2>
+          <div className="bg-[#111] border border-white/10 rounded-xl w-full max-w-md p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-light">Settings</h2>
               <button
                 onClick={() => setShowSettings(false)}
                 className="text-white/40 hover:text-white transition-colors"
@@ -684,12 +685,12 @@ export default function ChatPage() {
               </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <label className="text-xs text-white/40 uppercase tracking-wider mb-3 block">Model</label>
+                <label className="text-[10px] text-white/40 uppercase tracking-wider mb-2 block">Model</label>
                 <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
                   {/* Search Models */}
-                  <div className="px-3 py-2 border-b border-white/5">
+                  <div className="px-3 py-1.5 border-b border-white/5">
                     <input
                       type="text"
                       placeholder="Search models..."
@@ -706,12 +707,12 @@ export default function ChatPage() {
                   </div>
 
                   {/* Scrollable List */}
-                  <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                  <div className="max-h-40 overflow-y-auto custom-scrollbar">
                     {availableModels.length > 0 ? availableModels.map((m) => (
                       <button
                         key={m.id}
                         onClick={() => setSelectedModel(m.id)}
-                        className={`model-item w-full text-left px-3 py-2 text-sm transition-colors border-b border-white/5 last:border-0 ${selectedModel === m.id
+                        className={`model-item w-full text-left px-3 py-1.5 text-xs transition-colors border-b border-white/5 last:border-0 ${selectedModel === m.id
                           ? 'bg-white/10 text-white'
                           : 'text-white/50 hover:text-white hover:bg-white/5'
                           }`}
@@ -719,7 +720,7 @@ export default function ChatPage() {
                         {m.name || m.id}
                       </button>
                     )) : (
-                      <div className="px-3 py-4 text-sm text-white/30 text-center">No models available</div>
+                      <div className="px-3 py-2 text-xs text-white/30 text-center">No models available</div>
                     )}
                   </div>
                 </div>
@@ -727,27 +728,27 @@ export default function ChatPage() {
 
               {/* Audio — Coming Soon */}
               <div>
-                <label className="text-xs text-white/40 uppercase tracking-wider mb-3 block">Ambient Audio</label>
-                <div className="flex items-center gap-3 px-3 py-3 bg-white/3 border border-white/5 rounded-md">
-                  <Volume2 className="w-4 h-4 text-white/20" />
-                  <span className="text-sm text-white/30">Coming soon</span>
+                <label className="text-[10px] text-white/40 uppercase tracking-wider mb-2 block">Ambient Audio</label>
+                <div className="flex items-center gap-2 px-3 py-2 bg-white/3 border border-white/5 rounded-md">
+                  <Volume2 className="w-3.5 h-3.5 text-white/20" />
+                  <span className="text-xs text-white/30">Coming soon</span>
                 </div>
               </div>
 
               {/* Keyboard Shortcuts */}
               <div>
-                <label className="text-xs text-white/40 uppercase tracking-wider mb-3 block">Shortcuts</label>
-                <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between text-white/30"><span>New chat</span><kbd className="text-white/20 bg-white/5 px-1.5 py-0.5 rounded">Ctrl+N</kbd></div>
-                  <div className="flex justify-between text-white/30"><span>Toggle sidebar</span><kbd className="text-white/20 bg-white/5 px-1.5 py-0.5 rounded">Ctrl+B</kbd></div>
-                  <div className="flex justify-between text-white/30"><span>Search</span><kbd className="text-white/20 bg-white/5 px-1.5 py-0.5 rounded">Ctrl+K</kbd></div>
-                  <div className="flex justify-between text-white/30"><span>Settings</span><kbd className="text-white/20 bg-white/5 px-1.5 py-0.5 rounded">Ctrl+,</kbd></div>
-                  <div className="flex justify-between text-white/30"><span>Export chat</span><kbd className="text-white/20 bg-white/5 px-1.5 py-0.5 rounded">Ctrl+Shift+E</kbd></div>
-                  <div className="flex justify-between text-white/30"><span>Focus input</span><kbd className="text-white/20 bg-white/5 px-1.5 py-0.5 rounded">/</kbd></div>
+                <label className="text-[10px] text-white/40 uppercase tracking-wider mb-2 block">Shortcuts</label>
+                <div className="space-y-1 text-[10px]">
+                  <div className="flex justify-between text-white/30"><span>New chat</span><kbd className="text-white/20 bg-white/5 px-1 rounded">Ctrl+N</kbd></div>
+                  <div className="flex justify-between text-white/30"><span>Toggle sidebar</span><kbd className="text-white/20 bg-white/5 px-1 rounded">Ctrl+B</kbd></div>
+                  <div className="flex justify-between text-white/30"><span>Search</span><kbd className="text-white/20 bg-white/5 px-1 rounded">Ctrl+K</kbd></div>
+                  <div className="flex justify-between text-white/30"><span>Settings</span><kbd className="text-white/20 bg-white/5 px-1 rounded">Ctrl+,</kbd></div>
+                  <div className="flex justify-between text-white/30"><span>Export chat</span><kbd className="text-white/20 bg-white/5 px-1 rounded">Ctrl+Shift+E</kbd></div>
+                  <div className="flex justify-between text-white/30"><span>Focus input</span><kbd className="text-white/20 bg-white/5 px-1 rounded">/</kbd></div>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-white/5">
+              <div className="pt-3 border-t border-white/5">
                 <button
                   onClick={async () => {
                     await signOut();
@@ -755,7 +756,7 @@ export default function ChatPage() {
                     setMessages([]);
                     setCurrentConversationId(null);
                   }}
-                  className="text-xs text-white/30 hover:text-white/60 transition-colors"
+                  className="text-[10px] text-white/30 hover:text-white/60 transition-colors"
                 >
                   Sign out
                 </button>
