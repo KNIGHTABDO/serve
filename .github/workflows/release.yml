@@ -83,29 +83,46 @@ jobs:
         env:
           GIST_ID: '5d32c6a7911365e4815e5d3261f20692' # Your Gist ID
           GIST_TOKEN: ${{ secrets.GT_TOKEN }} # Must be a PAT with 'gist' scope
-          DOWNLOAD_URL: ${{ env.DOWNLOAD_URL }}
         with:
           script: |
             const fs = require('fs');
+            const path = require('path');
             const version = context.ref.replace('refs/tags/v', '');
-            const downloadUrl = process.env.DOWNLOAD_URL;
-            const gistId = process.env.GIST_ID;
-
-            // Wait, we need the signature!
-            // The signature file is in src-tauri/target/release/bundle/nsis/SERVE_... .exe.zip.sig
-            // But checking file paths in Actions is tricky across OS.
-            // Let's assume the build step generated it locally.
             
-            // Read signature file
-            const sigPath = `src-tauri/target/release/bundle/nsis/SERVE_${version}_x64-setup.exe.zip.sig`;
-            let signature = '';
-            try {
-              signature = fs.readFileSync(sigPath, 'utf8').trim();
-            } catch (e) {
-              console.log('Could not read specific sig file, trying generic glob or erroring out.');
-              // Fallback logic could go here
-              throw new Error('Signature file missing: ' + sigPath);
+            // Locate the signature file dynamically
+            const nsisDir = 'src-tauri/target/release/bundle/nsis';
+            
+            if (!fs.existsSync(nsisDir)) {
+              console.error(`Directory not found: ${nsisDir}`);
+              try {
+                 console.log('Listing src-tauri:', fs.readdirSync('src-tauri'));
+                 console.log('Listing target:', fs.readdirSync('src-tauri/target'));
+                 console.log('Listing release:', fs.readdirSync('src-tauri/target/release'));
+                 console.log('Listing bundle:', fs.readdirSync('src-tauri/target/release/bundle'));
+              } catch (e) {
+                 console.error('Error listing dirs:', e);
+              }
+              throw new Error(`NSIS Bundle directory not found: ${nsisDir}`);
             }
+
+            const files = fs.readdirSync(nsisDir);
+            // Look for the update package signature (.zip.sig)
+            const sigFilename = files.find(f => f.endsWith('.zip.sig'));
+            
+            if (!sigFilename) {
+              console.error('Files in ' + nsisDir + ':', files);
+              throw new Error('No .zip.sig file found in NSIS bundle directory.');
+            }
+
+            const sigPath = path.join(nsisDir, sigFilename);
+            const signature = fs.readFileSync(sigPath, 'utf8').trim();
+            
+            // Construct download URL using the actual filename (remove .sig)
+            const assetName = sigFilename.replace('.sig', '');
+            const downloadUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/v${version}/${assetName}`;
+
+            console.log(`Found signature for ${assetName}`);
+            console.log(`Download URL: ${downloadUrl}`);
 
             const updateData = {
               version: version,
@@ -120,7 +137,7 @@ jobs:
             };
 
             await github.rest.gists.update({
-              gist_id: gistId,
+              gist_id: process.env.GIST_ID,
               files: {
                 "updates.json": {
                   content: JSON.stringify(updateData, null, 2)
