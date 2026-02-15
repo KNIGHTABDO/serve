@@ -1,8 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 
 export default function LandingPage() {
+  const [videoSrc, setVideoSrc] = useState('/intro.mp4');
+  const [isLooping, setIsLooping] = useState(false);
+
   return (
     <div className="h-full bg-black text-white overflow-y-auto relative isolate">
       {/* Video Background */}
@@ -10,15 +14,18 @@ export default function LandingPage() {
         autoPlay
         muted
         playsInline
-        onEnded={(e) => {
-          const video = e.currentTarget;
-          video.currentTime = 3; // Skip the first 3 seconds (logo intro) on loop
-          video.play().catch(() => { }); // Ignore AbortError from browser power saving
+        loop={isLooping}
+        onEnded={() => {
+          if (!isLooping) {
+            setVideoSrc('/loop.mp4');
+            setIsLooping(true);
+          }
         }}
-        className="fixed inset-0 w-full h-full object-cover -z-20 opacity-80"
-      >
-        <source src="/IMG_7957.MP4" type="video/mp4" />
-      </video>
+        key={videoSrc}
+        className="fixed inset-0 w-full h-full object-cover -z-20 opacity-80 bg-black"
+        src={videoSrc}
+      />
+
       <div className="fixed inset-0 bg-black/70 -z-10" />
 
       {/* Hero Section */}

@@ -28,6 +28,8 @@ export async function streamChat(
     onToken: (token: string) => void,
     onDone: (fullResponse: string) => void,
     onError: (error: string) => void,
+    fieldStudyContext?: string,
+    workspaceId?: string | null,
 ) {
     try {
         // Save user message to DB
@@ -40,8 +42,16 @@ export async function streamChat(
         const persona = getPersona(personaId || DEFAULT_PERSONA_ID);
 
         // Build memory context from past conversations
-        const { getRecentContext } = await import('./db');
-        const memoryContext = await getRecentContext(conversationId || undefined);
+        const { getRecentContext, getWorkspaceContext } = await import('./db');
+        const memoryContext = await getRecentContext(
+            conversationId || undefined, 
+            lastMessage?.content
+        );
+
+        let workspaceContext = '';
+        if (workspaceId) {
+            workspaceContext = await getWorkspaceContext(workspaceId, lastMessage?.content);
+        }
 
         const headers = await getAuthHeaders();
 
@@ -52,6 +62,20 @@ export async function streamChat(
         const systemMessages: { role: string; content: string }[] = [
             { role: 'system', content: persona.systemPrompt },
         ];
+
+        if (fieldStudyContext) {
+            systemMessages.push({
+                role: 'system',
+                content: `FIELD STUDY — You have been given the following local context to study. This is the "ground" for your insights. Reference it deeply but naturally.\n\n${fieldStudyContext}`
+            });
+        }
+
+        if (workspaceContext) {
+            systemMessages.push({
+                role: 'system',
+                content: `WORKSPACE GROUNDING — You are grounded in this workspace context. This is the persistent reality for this conversation. Use it as your primary reference for technical or conceptual details.\n\n${workspaceContext}`
+            });
+        }
 
         if (memoryContext) {
             systemMessages.push({

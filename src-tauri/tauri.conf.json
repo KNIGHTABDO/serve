@@ -32,7 +32,7 @@
       "tooltip": "SERVE"
     },
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' https://github.com https://api.github.com https://api.githubcopilot.com https://gist.githubusercontent.com ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: asset: http://asset.localhost"
+      "csp": "default-src 'self'; connect-src 'self' https://github.com https://api.github.com https://api.githubcopilot.com https://gist.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: asset: http://asset.localhost"
     }
   },
   "plugins": {

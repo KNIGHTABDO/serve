@@ -51,6 +51,10 @@
         "store:allow-set",
         "store:allow-delete",
         "store:allow-save",
-        "store:allow-load"
+        "store:allow-load",
+        "fs:allow-read-text-file",
+        "fs:allow-read-dir",
+        "fs:allow-stat",
+        "dialog:allow-open"
     ]
 }

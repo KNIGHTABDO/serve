@@ -7,9 +7,17 @@ export function TitleBar() {
     const [isTauri, setIsTauri] = useState(false);
     const [isMaximized, setIsMaximized] = useState(false);
     const [appWindow, setAppWindow] = useState<any>(null);
+    const [isThinking, setIsThinking] = useState(false);
 
     useEffect(() => {
+        // Listen for thinking state from chat
+        const handleStart = () => setIsThinking(true);
+        const handleStop = () => setIsThinking(false);
+        window.addEventListener('serve-thinking-start', handleStart);
+        window.addEventListener('serve-thinking-stop', handleStop);
+
         // Check if running in Tauri environment
+
         // We check for __TAURI_INTERNALS__ which is the v2 indicator, or fall back to __TAURI__ for v1 compatibility
         const isTauriEnv = typeof window !== 'undefined' &&
             ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
@@ -52,8 +60,13 @@ export function TitleBar() {
                 data-tauri-drag-region
                 className="flex-1 h-full flex items-center pl-3"
             >
-                <img src="/logo.png" alt="SERVE" className="h-4 w-auto opacity-60 hover:opacity-100 transition-opacity" />
+                <img 
+                    src="/logo.png" 
+                    alt="SERVE" 
+                    className={`h-4 w-auto transition-all duration-1000 ${isThinking ? 'pulse-silver opacity-100' : 'opacity-40 hover:opacity-100'}`} 
+                />
             </div>
+
 
             {/* Right: window controls (No Drag) */}
             <div className="flex items-center h-full z-10">
