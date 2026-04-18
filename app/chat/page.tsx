@@ -414,8 +414,8 @@ export default function ChatPage() {
       for (const file of files) {
         // Generate embedding for each file
         const { generateEmbedding } = await import('@/lib/embeddings');
-        const embedding = await generateEmbedding(file.content.slice(0, 5000)); 
-        await db.addFileToWorkspace(currentWorkspaceId, file.name, file.path, file.content, embedding);
+        const embedding = await generateEmbedding(file.content.slice(0, 5000));
+        await db.addFileToWorkspace(currentWorkspaceId, file.name, file.path, file.content, embedding || []);
       }
 
       alert(`Ingested and indexed ${files.length} files.`);
@@ -438,7 +438,7 @@ export default function ChatPage() {
       for (const file of files) {
         const { generateEmbedding } = await import('@/lib/embeddings');
         const embedding = await generateEmbedding(file.content.slice(0, 5000));
-        await db.addFileToWorkspace(currentWorkspaceId, file.name, file.path, file.content, embedding);
+        await db.addFileToWorkspace(currentWorkspaceId, file.name, file.path, file.content, embedding || []);
       }
 
       alert(`Ingested and indexed ${files.length} files.`);
@@ -592,7 +592,7 @@ export default function ChatPage() {
             // Generate semantic embedding for the title/context
             const { generateEmbedding } = await import('@/lib/embeddings');
             const embedding = await generateEmbedding(smartTitle + " " + userMessage);
-            await db.updateConversationTitle(convId, smartTitle, embedding);
+            await db.updateConversationTitle(convId, smartTitle, embedding || []);
           }
 
         }
