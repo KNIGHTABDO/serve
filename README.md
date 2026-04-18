@@ -1,102 +1,72 @@
 # SERVE
 
-**AI that sees patterns. A quiet space for conversations that matter.**
+**Not an assistant. A presence.**
 
-SERVE is a minimalist, local-first AI desktop application powered by GitHub Copilot. It speaks with earned authority — offering pattern recognition, parables, and the hard questions beneath the surface.
+SERVE is an anti-utility AI interface designed for deep, unstructured, local-first reflection. It abandons the sterile chat-bubble paradigm for an atmospheric, cinematic, and deeply contextual environment.
 
-## Features
+Originally built as an experimental Tauri Desktop App, **SERVE 3.0** has been completely reimagined as a fully client-side Web Application powered by Next.js and IndexedDB.
 
-- 🤖 **GitHub Copilot Integration** - Uses your existing Copilot subscription via Device Flow auth.
-- 💬 **Pattern Recognition** - The local AI remembers context and thematic threads across sessions (The Loom).
-- 🌟 **The Reliquary** - Crystallize profound insights into a dedicated, cinematic archive.
-- 👁️ **The Lens** - Drag-and-drop local text files for project-aware grounding.
-- 🔊 **Ambient Resonance** - Procedural, reactive audio soundscape generated live.
-- 🎨 **Minimalist UI** - Distraction-free interface with custom window controls.
-- 💾 **Local-First** - All conversations stored in a local SQLite database (`serve.db`).
-- 🚀 **True Desktop App** - Single `.exe` file, no bundled server, no terminal window.
-- ✨ **Beautiful Typography** - Markdown support with syntax highlighting.
-- 🎬 **Cinematic Video Background** - Seamless two-stage video sequence (Intro -> Loop).
-- ♾️ **Metallic Infinity Logo** - New brand identity with a dark-to-silver infinity symbol across the app.
+![SERVE Interface Screenshot](https://raw.githubusercontent.com/KNIGHTABDO/serve/main/public/logo.png)
 
+## Core Philosophy
 
-## Architecture
+1. **It reads the margins.** The system weaves fragments of your past conversations together (via local ONNX semantic searches) transparently.
+2. **It remembers locally.** There are no centralized cloud databases logging your secrets. Your conversations and workspace groundings never leave your personal browser profile (via IndexedDB).
+3. **It sets the tone.** Featuring procedural audio soundscapes (Web Audio API) and motion-heavy interfaces, SERVE brings weight to the conversation.
 
-This is a **static web application** running inside **Tauri v2**:
+## Tech Stack (Web Era)
 
-- **Frontend**: Next.js 16 (Static Export) + Tailwind CSS + React 19
-- **Backend Context**: Rust (Tauri)
-- **Database**: SQLite (via `@tauri-apps/plugin-sql`)
-- **Networking**: Direct client-side HTTP calls to GitHub APIs (via `@tauri-apps/plugin-http`)
-- **Storage**: Persistent key-value store for auth tokens (via `@tauri-apps/plugin-store`)
+- **Framework:** Next.js 16 (App Router)
+- **Styling:** Tailwind CSS + Framer Motion
+- **Intelligence Engine:** GitHub Copilot (Device Flow Auth)
+- **Local Database:** Dexie.js (IndexedDB wrapper)
+- **Semantic Engine:** `@xenova/transformers` (Local ONNX execution in-browser)
+- **Infrastructure:** Vercel (Routing + API Proxy limits to avoid CORS)
 
-There is **no Node.js server** required at runtime. The application is a self-contained native binary.
+## Setup & Deployment
 
-## Installation
-
-### Windows Desktop
-
-1. Download the latest installer (`.exe` or `.msi`) from Releases.
-2. Run the installer.
-3. Launch SERVE from the Start Menu.
-
-## Development
+Because SERVE operates securely and runs fully in your browser, setting it up involves running the local development server or deploying to a cloud host.
 
 ### Prerequisites
 
-- Node.js 18+
-- Rust (latest stable)
-- Visual Studio C++ Build Tools (for Windows development)
+- Node.js version 20+
+- An active GitHub Copilot subscription (for Device Code auth).
 
-### Setup
+### Running Locally
 
 ```bash
 # Install dependencies
 npm install
 
-# Run development mode (hot reload)
-npm run dev:tauri
+# Run the development server
+npm run dev
 ```
 
-### Build
+Visit `http://localhost:3000`. Your browser will initiate the IndexedDB schemas automatically on visit.
 
-To create the production installer:
+### Deploying to Vercel
 
-```bash
-# Build the Windows application
-npm run build:tauri
-```
+SERVE is fully configured to deploy automatically via Vercel.
 
-The output installer will be located at:
-`src-tauri/target/release/bundle/nsis/`
+1. Fork or push this repository to your GitHub account.
+2. Log into [Vercel](https://vercel.com/) and create a new project.
+3. Select your `serve` repository.
+4. Keep the default settings (Framework Preset: Next.js).
+5. Click **Deploy**.
 
-## Project Structure
+*Note: Since there are no external databases required, there are ZERO Environment Variables needed during deployment!*
 
-```
-SERVE/
-├── app/              # Next.js Frontend (Static Export)
-│   ├── chat/         # Chat interface
-│   ├── components/   # React components (e.g., TitleBar, AuthModal)
-│   └── layout.tsx    # Root layout with custom title bar
-├── src-tauri/        # Rust Backend Context
-│   ├── src/          # Rust source code
-│   └── tauri.conf.json # Tauri configuration
-├── lib/
-│   └── tauri/        # Client-side services (Auth, DB, Chat)
-└── out/              # Static build output (generated)
-```
+## Advanced Features
 
-## Contributing
+### The Reliquary (Artifacts)
+When SERVE detects crystallized intelligence or thematic resolutions, it produces *Artifacts* utilizing structural markdown patterns. These are permanently saved into "The Reliquary" for easy citation.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Dynamic Grounding
+Tired of copying text blocks? Open the right-side panel ("The Ground") and drop in entire source code directories. SERVE embeds up to thousands of files directly into your browser's local vector index.
 
-## License
-
-MIT
+### Atmospheric Audio
+Powered dynamically by the Web Audio API, the UI physically responds when the LLM begins "thinking" with subtle synthesized low-pass sweeps. Use the settings menu (Ctrl+,) to toggle resonance on/off.
 
 ---
 
-*"The broom doesn't care what I become."*
+*SERVE 2026. Made with profound intent.*

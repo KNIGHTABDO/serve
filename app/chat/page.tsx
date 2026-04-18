@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import Link from 'next/link';
 
 // Web services (replaces Tauri)
 import { isAuthenticated, fetchModels, signOut } from '@/lib/auth';
@@ -1266,7 +1267,7 @@ export default function ChatPage() {
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-white/5">
+              <div className="pt-3 border-t border-white/5 flex items-center justify-between">
                 <button
                   onClick={async () => {
                     await signOut();
@@ -1278,6 +1279,11 @@ export default function ChatPage() {
                 >
                   Sign out
                 </button>
+                <div className="flex gap-3 text-[10px] text-white/20">
+                  <Link href="/privacy" className="hover:text-white/40 transition-colors">Privacy</Link>
+                  <Link href="/terms" className="hover:text-white/40 transition-colors">Terms</Link>
+                  <Link href="/changelog" className="hover:text-white/40 transition-colors">Changelog</Link>
+                </div>
               </div>
             </div>
           </div>
@@ -1286,3 +1292,4 @@ export default function ChatPage() {
     </div>
   );
 }
+

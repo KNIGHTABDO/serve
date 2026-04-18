@@ -176,7 +176,17 @@ export default function LandingPage() {
 
       {/* Footer */}
       <div className="py-12 px-6 border-t border-white/5">
-        <div className="max-w-2xl mx-auto flex items-center justify-between text-xs text-white/20">
+        <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-between text-xs text-white/20 gap-4">
+          <div className="flex gap-4">
+            <Link href="/privacy" className="hover:text-white/60 transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-white/60 transition-colors">Terms</Link>
+            <Link href="/changelog" className="hover:text-white/60 transition-colors">Changelog</Link>
+          </div>
+          <div className="flex items-center gap-4">
+            <span>SERVE</span>
+            <span>2026</span>
+          </div>
+        </div>
           <span>SERVE</span>
           <span>2026</span>
         </div>
@@ -184,3 +194,4 @@ export default function LandingPage() {
     </div>
   );
 }
+
