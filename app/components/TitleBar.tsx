@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
+import { usePathname } from 'next/navigation';
 
 export function TitleBar() {
     const [isThinking, setIsThinking] = useState(false);
+    const pathname = usePathname();
 
     useEffect(() => {
         // Listen for thinking state from chat
@@ -18,6 +19,8 @@ export function TitleBar() {
             window.removeEventListener('serve-thinking-stop', handleStop);
         };
     }, []);
+
+    if (pathname === '/') return null;
 
     return (
         <div className="h-8 flex items-center justify-between select-none bg-[#0a0a0a] border-b border-white/5 shrink-0 relative">

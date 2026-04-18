@@ -32,7 +32,7 @@ export default function RootLayout({
       </head>
       <body
         className="antialiased bg-black text-white flex flex-col h-screen overflow-hidden"
-        style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+        style={{ fontFamily: "Inter, system-ui, sans-serif" }}
       >
         <TitleBar />
         <div className="flex-1 overflow-hidden">
