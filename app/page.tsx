@@ -31,7 +31,7 @@ export default function LandingPage() {
       {/* Hero Section */}
       <div className="min-h-full flex flex-col items-center justify-center px-6 py-12 relative z-10">
         <div className="text-center max-w-2xl mx-auto">
-          <div className="mb-8 sm:mb-10 flex justify-center">
+          <div className="mb-8 flex justify-center">
             <img src="/logo.png" alt="SERVE" className="w-28 h-28 sm:w-44 sm:h-44 opacity-90 drop-shadow-[0_0_40px_rgba(255,255,255,0.15)]" />
           </div>
 
@@ -187,11 +187,7 @@ export default function LandingPage() {
             <span>2026</span>
           </div>
         </div>
-          <span>SERVE</span>
-          <span>2026</span>
-        </div>
       </div>
     </div>
   );
 }
-
