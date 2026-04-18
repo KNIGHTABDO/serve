@@ -1,12 +1,16 @@
-import Link from 'next/link';
+'use client';
+
+import { useRouter } from 'next/navigation';
 
 export default function TermsPage() {
+  const router = useRouter();
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-white/10 font-sans">
+    <div className="h-screen overflow-y-auto bg-[#0a0a0a] text-white selection:bg-white/10 font-sans">
       <div className="max-w-2xl mx-auto px-6 py-24 sm:py-32">
-        <Link href="/" className="text-xs text-white/40 hover:text-white uppercase tracking-widest transition-colors mb-16 inline-block">
+        <button onClick={() => router.back()} className="text-xs text-white/40 hover:text-white uppercase tracking-widest transition-colors mb-16 inline-block">
           ← Back
-        </Link>
+        </button>
         
         <h1 className="text-3xl font-light mb-12 tracking-wide">Terms of Service</h1>
         
