@@ -230,6 +230,7 @@ export async function searchConversations(query: string): Promise<Conversation[]
     try {
         const { generateEmbedding, cosineSimilarity } = await import('./embeddings');
         const queryEmbedding = await generateEmbedding(query);
+        if (!queryEmbedding) throw new Error('Embeddings unavailable');
 
         const convs = await getConversations();
 
@@ -337,6 +338,7 @@ export async function getWorkspaceContext(workspaceId: string, query?: string): 
     try {
         const { generateEmbedding, cosineSimilarity } = await import('./embeddings');
         const queryEmbedding = await generateEmbedding(query);
+        if (!queryEmbedding) throw new Error('Embeddings unavailable');
 
         const rankedFiles = files
             .filter(f => f.embedding)
