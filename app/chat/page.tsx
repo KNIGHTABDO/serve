@@ -15,24 +15,12 @@ import Link from 'next/link';
 import { isAuthenticated, fetchModels, signOut } from '@/lib/auth';
 import { streamChat, generateTitle, type ChatMessage } from '@/lib/chat';
 import * as db from '@/lib/db';
-import { PERSONAS, DEFAULT_PERSONA_ID } from '@/lib/personas';
+import { PERSONAS, DEFAULT_PERSONA_ID, getPersona } from '@/lib/personas';
 import { resonance } from '@/lib/audio';
 import { ingestDirectory, ingestFiles } from '@/lib/fs';
 
 
-// Rotating placeholders
-
-const PLACEHOLDERS = [
-  "Say something...",
-  "What's on your mind?",
-  "The real version, not the polished one.",
-  "Start anywhere.",
-  "What are you avoiding?",
-  "...",
-  "Talk to me.",
-  "No wrong answers.",
-  "What would you say if nobody was listening?",
-];
+// Rotating placeholders — now persona-driven
 
 // Code block component with copy button
 function CodeBlock({ language, children }: { language: string; children: string }) {
@@ -194,8 +182,17 @@ export default function ChatPage() {
   // Rotate placeholder
 
   useEffect(() => {
-    setPlaceholderIndex(Math.floor(Math.random() * PLACEHOLDERS.length));
-  }, [currentConversationId]);
+    const persona = getPersona(selectedPersona);
+    setPlaceholderIndex(Math.floor(Math.random() * persona.placeholder.length));
+  }, [currentConversationId, selectedPersona]);
+
+  // Rotate placeholder text every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex(prev => prev + 1);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [selectedPersona]);
 
   useEffect(() => {
     checkAuth();
@@ -314,7 +311,7 @@ export default function ChatPage() {
       const conv = await db.createConversation(selectedModel, currentWorkspaceId);
       setCurrentConversationId(conv.id);
       setMessages([]);
-      setPlaceholderIndex(Math.floor(Math.random() * PLACEHOLDERS.length));
+      setPlaceholderIndex(Math.floor(Math.random() * getPersona(selectedPersona).placeholder.length));
       loadConversations();
       inputRef.current?.focus();
       // Close sidebar on mobile after creating new chat
@@ -975,9 +972,33 @@ export default function ChatPage() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 sm:py-8">
           {messages.length === 0 && !error ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center select-none">
-                <img src="/logo.png" alt="SERVE" className="w-16 h-16 sm:w-24 sm:h-24 opacity-20 mx-auto mb-4" />
+            <div className="h-full flex flex-col items-center justify-center">
+              <div className="text-center select-none space-y-6">
+                <motion.img
+                  src="/logo.png"
+                  alt="SERVE"
+                  className="w-16 h-16 sm:w-20 sm:h-20 opacity-[0.08] mx-auto"
+                  animate={{ opacity: [0.06, 0.12, 0.06] }}
+                  transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                />
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={placeholderIndex}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.6 }}
+                    className="text-sm text-white/20 font-light tracking-wide italic max-w-md"
+                  >
+                    {getPersona(selectedPersona).placeholder[placeholderIndex % getPersona(selectedPersona).placeholder.length]}
+                  </motion.p>
+                </AnimatePresence>
+                <button
+                  onClick={() => inputRef.current?.focus()}
+                  className="text-[11px] text-white/15 hover:text-white/30 transition-colors tracking-[0.3em] lowercase mt-4"
+                >
+                  begin
+                </button>
               </div>
             </div>
           ) : (
@@ -986,8 +1007,8 @@ export default function ChatPage() {
                 <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : ''}>
                   {m.role === 'user' ? (
                     <div className="max-w-[90%] sm:max-w-[85%] message-content">
-                      <div className="text-white/60 text-sm leading-relaxed">{m.content}</div>
-                      {m.created_at && <div className="text-[10px] text-white/10 mt-1 text-right">{timeAgo(m.created_at)}</div>}
+                      <div className="text-white/50 text-sm leading-relaxed text-right">{m.content}</div>
+                      {m.created_at && <div className="text-[10px] text-white/8 mt-1.5 text-right">{timeAgo(m.created_at)}</div>}
                     </div>
                   ) : (
                     <div className="group relative message-content">
@@ -1085,33 +1106,12 @@ export default function ChatPage() {
         {/* Input Area */}
         <div className="p-4 sm:p-6 pb-6 sm:pb-10">
           <div className="max-w-2xl mx-auto">
-            {/* Persona Selector — only visible on empty conversations */}
-            {messages.length === 0 && (
-              <div className="flex items-center gap-1.5 sm:gap-2 mb-3 justify-center flex-wrap">
-                {PERSONAS.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => setSelectedPersona(p.id)}
-                    className={`group relative px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs transition-all duration-200 ${selectedPersona === p.id
-                      ? 'bg-white/10 text-white border border-white/20'
-                      : 'text-white/30 hover:text-white/50 border border-transparent hover:border-white/10'
-                      }`}
-                    title={p.description}
-                  >
-                    {p.name}
-                    {/* Tooltip — hidden on mobile */}
-                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#1a1a1a] border border-white/10 rounded text-[10px] text-white/40 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden sm:block">
-                      {p.description}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Input with inline persona label */}
             <div className="relative">
               <textarea
                 ref={inputRef}
                 className="w-full bg-transparent border border-white/10 rounded-lg pl-4 pr-12 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none overflow-hidden"
-                placeholder={PLACEHOLDERS[placeholderIndex]}
+                placeholder={getPersona(selectedPersona).placeholder[placeholderIndex % getPersona(selectedPersona).placeholder.length]}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -1128,6 +1128,38 @@ export default function ChatPage() {
                   <FileText className={`w-4 h-4 ${fieldStudyContext ? 'text-white/60' : ''}`} />
                   <input type="file" className="hidden" accept=".txt,.md,.json,.csv" onChange={handleFieldStudyUpload} />
                 </label>
+              </div>
+            </div>
+            {/* Persona selector — subtle, always visible, Nenspace-style below input */}
+            <div className="flex items-center justify-end mt-2 gap-3">
+              <div className="relative group">
+                <button
+                  onClick={() => {
+                    const el = document.getElementById('persona-dropdown');
+                    if (el) el.classList.toggle('hidden');
+                  }}
+                  className="text-[11px] text-white/25 hover:text-white/50 transition-colors tracking-wide lowercase"
+                >
+                  {getPersona(selectedPersona).name.toLowerCase()} <span className="text-white/15">▾</span>
+                </button>
+                <div id="persona-dropdown" className="hidden absolute bottom-full right-0 mb-2 bg-[#111] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 min-w-[180px]">
+                  {PERSONAS.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setSelectedPersona(p.id);
+                        document.getElementById('persona-dropdown')?.classList.add('hidden');
+                      }}
+                      className={`w-full text-left px-4 py-2.5 transition-all ${selectedPersona === p.id
+                        ? 'bg-white/5 text-white/80'
+                        : 'text-white/40 hover:bg-white/[0.03] hover:text-white/60'
+                        }`}
+                    >
+                      <div className="text-xs font-medium">{p.name}</div>
+                      <div className="text-[10px] text-white/25 mt-0.5">{p.description}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             {/* Active Quote Context Bar */}
