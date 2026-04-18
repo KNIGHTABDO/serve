@@ -6,7 +6,20 @@ let extractor: any = null;
  */
 async function getExtractor() {
     if (!extractor) {
-        const { pipeline } = await import('@xenova/transformers');
+        // Turbopack / Next.js 16 Webpack 5 polyfill fix for ONNX runtime
+        if (typeof window !== 'undefined') {
+            if (!(window as any).process) {
+                (window as any).process = { env: {}, versions: {} };
+            }
+        }
+        
+        const transformers = await import('@xenova/transformers');
+        const pipeline = transformers.pipeline;
+        const env = transformers.env;
+        
+        // Critical: disable local model path checking in browser to prevent fs hits
+        env.allowLocalModels = false;
+        
         extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
     }
     return extractor;
