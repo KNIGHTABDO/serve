@@ -7,6 +7,20 @@ export default function ChangelogPage() {
 
   const versions = [
     {
+      version: '3.1.0',
+      date: 'April 2026',
+      title: 'The Anti-Wrapper',
+      changes: [
+        'Introduced the Anti-Wrapper Protocol — a deep system-prompt layer that prevents SERVE from ever sounding like a generic chatbot.',
+        'Each persona now carries its own rotating poetic placeholders that cycle in the empty state and input field.',
+        'Atmospheric empty state redesign: breathing logo animation, meditative cycling text, and a minimal "begin" anchor.',
+        'Persona selector moved below the input as a subtle, always-accessible dropdown — inspired by competitive analysis.',
+        'Strengthened identity protection: all personas now refuse emojis, corporate phrasing, and ChatGPT-style scaffolding.',
+        'Legal pages (Privacy, Terms) and Changelog added with full SERVE aesthetic and dynamic back-navigation.',
+        'Vercel deployment configuration finalized with security headers.',
+      ]
+    },
+    {
       version: '3.0.0',
       date: 'April 2026',
       title: 'The Great Unbinding',
