@@ -35,6 +35,47 @@ body {
   .pulse-silver {
     animation: silver-breath 3s ease-in-out infinite;
   }
+
+  /* Seasonal Atmosphere background layer */
+  .atmosphere-layer {
+    position: fixed;
+    inset: 0;
+    z-index: -10;
+    transition: background-color 2000ms ease-in-out;
+    background-color: var(--atmosphere-bg, #0a0a0a);
+    pointer-events: none;
+  }
+
+  /* Ephemeral Mode — message fading */
+  .ephemeral-message {
+    transition: opacity 200ms ease;
+  }
+
+  .ephemeral-message[data-ephemeral='true'] {
+    animation: ephemeral-fade 180s linear forwards;
+  }
+
+  .ephemeral-message[data-ephemeral='true']:hover {
+    animation: none;
+    opacity: 1 !important;
+  }
+
+  /* Ephemeral artifacts never fade */
+  .ephemeral-message[data-artifact='true'] {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  /* Farewell desaturation */
+  .farewell-grayscale {
+    filter: grayscale(100%);
+    transition: filter 2s ease;
+  }
+
+  /* Weight input glow transitions */
+  .weight-glow {
+    transition: border-color 400ms ease, box-shadow 400ms ease;
+  }
 }
 
 @keyframes silver-breath {

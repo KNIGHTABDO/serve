@@ -13,14 +13,16 @@ class ServeDatabase extends Dexie {
     messages!: Table;
     workspaces!: Table;
     workspace_files!: Table;
+    annotations!: Table;
 
     constructor() {
         super('serve');
-        this.version(1).stores({
+        this.version(2).stores({
             conversations: 'id, title, model, workspace_id, updated_at',
             messages: 'id, conversation_id, role, created_at',
             workspaces: 'id, name, created_at',
             workspace_files: 'id, workspace_id, name, created_at',
+            annotations: 'id, message_id, word, created_at',
         });
     }
 }
@@ -64,6 +66,14 @@ export interface Message {
     conversation_id: string;
     role: string;
     content: string;
+    created_at: string;
+}
+
+export interface Annotation {
+    id: string;
+    message_id: string;
+    word: string;
+    note: string;
     created_at: string;
 }
 
@@ -359,6 +369,37 @@ export async function getWorkspaceContext(workspaceId: string, query?: string): 
         console.error('Semantic search failed, falling back to basic context:', e);
         return files.slice(0, 3).map(f => `--- FILE: ${f.name} ---\n${f.content.slice(0, 2000)}`).join('\n\n');
     }
+}
+
+// Annotations for The Margins
+export async function getAnnotations(): Promise<Annotation[]> {
+    try {
+        return await database.annotations.orderBy('created_at').reverse().toArray();
+    } catch (e) {
+        console.error('getAnnotations failed:', e);
+        return [];
+    }
+}
+
+export async function getAnnotationsForMessage(messageId: string): Promise<Annotation[]> {
+    try {
+        return await database.annotations.where('message_id').equals(messageId).toArray();
+    } catch (e) {
+        console.error('getAnnotationsForMessage failed:', e);
+        return [];
+    }
+}
+
+export async function addAnnotation(messageId: string, word: string, note: string): Promise<Annotation> {
+    const id = generateId();
+    const now = new Date().toISOString();
+    const annotation: Annotation = { id, message_id: messageId, word, note, created_at: now };
+    await database.annotations.add(annotation);
+    return annotation;
+}
+
+export async function deleteAnnotation(id: string) {
+    await database.annotations.delete(id);
 }
 
 // Export a conversation as markdown text

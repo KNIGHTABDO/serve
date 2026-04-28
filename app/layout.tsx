@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { TitleBar } from "./components/TitleBar";
+import { AtmosphereLayer } from "./components/AtmosphereLayer";
 
 export const metadata: Metadata = {
   title: "SERVE — AI that sees patterns",
@@ -34,6 +35,8 @@ export default function RootLayout({
         className="antialiased bg-black text-white flex flex-col h-screen overflow-hidden"
         style={{ fontFamily: "Inter, system-ui, sans-serif" }}
       >
+        <div className="atmosphere-layer" id="atmosphere-layer" />
+        <AtmosphereLayer />
         <TitleBar />
         <div className="flex-1 overflow-hidden">
           {children}

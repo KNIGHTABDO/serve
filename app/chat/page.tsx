@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AuthModal } from '../components/AuthModal';
-import { Settings, Plus, Trash2, Copy, Check, Search, Download, Volume2, X, Bookmark, ChevronRight, History, Quote, CornerDownRight, FileText, Layers, FolderOpen, Database, Menu } from 'lucide-react';
+import { Settings, Plus, Trash2, Copy, Check, Search, Download, Volume2, X, Bookmark, ChevronRight, History, Quote, CornerDownRight, FileText, Layers, FolderOpen, Database, Menu, PauseCircle, Ear } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -19,8 +18,41 @@ import { PERSONAS, DEFAULT_PERSONA_ID, getPersona } from '@/lib/personas';
 import { resonance } from '@/lib/audio';
 import { ingestDirectory, ingestFiles } from '@/lib/fs';
 
+// Aesthetic utilities
+import {
+  getSilenceBetween,
+  formatPoeticTimestamp,
+  formatPoeticTimeAgo,
+  isEphemeralEnabled,
+  setEphemeralEnabled,
+  hasArtifact,
+  analyzeSentiment,
+  getWeightBorderClass,
+  getWeightShadowClass,
+  getDisciplineMode,
+  setDisciplineMode,
+  getDisciplinePlaceholder,
+  getDisciplineInputClass,
+  getDisciplineWarning,
+  violatesOneSentence,
+  violates140Chars,
+  type DisciplineMode,
+} from '@/lib/aesthetics';
 
-// Rotating placeholders — now persona-driven
+// Aesthetic components
+import {
+  SilenceBetween,
+  ThresholdStates,
+  TheClearing,
+  useClearingDiscovered,
+  markClearingDiscovered,
+  TheEcho,
+  useEchoToggle,
+  TheMargins,
+  Farewell,
+} from '@/app/components/aesthetics';
+import type { Annotation } from '@/app/components/aesthetics';
+
 
 // Code block component with copy button
 function CodeBlock({ language, children }: { language: string; children: string }) {
@@ -56,20 +88,9 @@ function CodeBlock({ language, children }: { language: string; children: string 
   );
 }
 
-// Format relative timestamps
+// Format relative timestamps (poetic time)
 function timeAgo(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHour = Math.floor(diffMs / 3600000);
-  const diffDay = Math.floor(diffMs / 86400000);
-
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHour < 24) return `${diffHour}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return date.toLocaleDateString();
+  return formatPoeticTimeAgo(dateStr);
 }
 
 interface UIMessage {
@@ -77,7 +98,7 @@ interface UIMessage {
   role: 'user' | 'assistant';
   content: string;
   created_at?: string;
-  threadFound?: boolean; // For "The Loom"
+  threadFound?: boolean;
 }
 
 interface Artifact {
@@ -125,17 +146,37 @@ export default function ChatPage() {
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
 
   // Persona state
-
   const [selectedPersona, setSelectedPersona] = useState(DEFAULT_PERSONA_ID);
   const [fieldStudyContext, setFieldStudyContext] = useState<{ name: string, content: string } | null>(null);
 
   // Placeholder rotation
-
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  // Aesthetic state
+  const [ephemeralMode, setEphemeralMode] = useState(false);
+  const [disciplineMode, setDisciplineMode] = useState<DisciplineMode>('off');
+  const [disciplineWarning, setDisciplineWarning] = useState<string | null>(null);
+  const [clearingOpen, setClearingOpen] = useState(false);
+  const [echoActive, toggleEcho] = useEchoToggle();
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const clearingDiscovered = useClearingDiscovered();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Initialize aesthetic preferences
+  useEffect(() => {
+    setEphemeralMode(isEphemeralEnabled());
+    setDisciplineMode(getDisciplineMode());
+  }, []);
+
+  // Load annotations
+  useEffect(() => {
+    db.getAnnotations().then(setAnnotations).catch(console.error);
+  }, []);
 
   const handleSelection = (e: MouseEvent) => {
     // Small delay to ensure selection is complete
@@ -180,7 +221,6 @@ export default function ChatPage() {
   };
 
   // Rotate placeholder
-
   useEffect(() => {
     const persona = getPersona(selectedPersona);
     setPlaceholderIndex(Math.floor(Math.random() * persona.placeholder.length));
@@ -215,6 +255,13 @@ export default function ChatPage() {
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in inputs
+      const tag = document.activeElement?.tagName;
+      if (tag === 'TEXTAREA' || tag === 'INPUT') {
+        // Still allow Escape
+        if (e.key !== 'Escape') return;
+      }
+
       // Ctrl+N — new chat
       if (e.ctrlKey && e.key === 'n') {
         e.preventDefault();
@@ -248,7 +295,7 @@ export default function ChatPage() {
         setTimeout(() => searchInputRef.current?.focus(), 100);
       }
       // / — focus input (when not already typing)
-      if (e.key === '/' && !e.ctrlKey && !e.metaKey && document.activeElement?.tagName !== 'TEXTAREA' && document.activeElement?.tagName !== 'INPUT') {
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && tag !== 'TEXTAREA' && tag !== 'INPUT') {
         e.preventDefault();
         inputRef.current?.focus();
       }
@@ -257,12 +304,13 @@ export default function ChatPage() {
         if (showSettings) setShowSettings(false);
         else if (searchOpen) { setSearchOpen(false); setSearchQuery(''); setSearchResults(null); }
         else if (sidebarOpen && window.innerWidth < 768) setSidebarOpen(false);
+        else if (clearingOpen) setClearingOpen(false);
       }
     };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [showSettings, searchOpen, currentConversationId, sidebarOpen]);
+  }, [showSettings, searchOpen, currentConversationId, sidebarOpen, clearingOpen]);
 
   // Search debounce
   useEffect(() => {
@@ -412,12 +460,10 @@ export default function ChatPage() {
     try {
       const files = await ingestDirectory();
       for (const file of files) {
-        // Generate embedding for each file
         const { generateEmbedding } = await import('@/lib/embeddings');
         const embedding = await generateEmbedding(file.content.slice(0, 5000));
         await db.addFileToWorkspace(currentWorkspaceId, file.name, file.path, file.content, embedding || []);
       }
-
       alert(`Ingested and indexed ${files.length} files.`);
     } catch (e) {
       console.error(e);
@@ -440,7 +486,6 @@ export default function ChatPage() {
         const embedding = await generateEmbedding(file.content.slice(0, 5000));
         await db.addFileToWorkspace(currentWorkspaceId, file.name, file.path, file.content, embedding || []);
       }
-
       alert(`Ingested and indexed ${files.length} files.`);
     } catch (e) {
       console.error(e);
@@ -450,8 +495,61 @@ export default function ChatPage() {
     }
   };
 
-  const submitMessage = async () => {
+  // Weight: analyze sentiment on input change
+  const [weightResult, setWeightResult] = useState(() => analyzeSentiment(''));
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setInput(value);
+
+    // The Weight
+    const sentiment = analyzeSentiment(value);
+    setWeightResult(sentiment);
+
+    // The Discipline warnings
+    if (disciplineMode !== 'off') {
+      const warning = getDisciplineWarning(value, disciplineMode);
+      setDisciplineWarning(warning);
+    }
+  };
+
+  // Ephemeral toggle handler
+  const toggleEphemeral = () => {
+    const next = !ephemeralMode;
+    setEphemeralMode(next);
+    setEphemeralEnabled(next);
+  };
+
+  // Discipline toggle handler
+  const toggleDiscipline = (mode: DisciplineMode) => {
+    const next = disciplineMode === mode ? 'off' : mode;
+    setDisciplineMode(next);
+    setDisciplineModeState(next);
+    setDisciplineWarning(null);
+  };
+
+  const setDisciplineModeState = (mode: DisciplineMode) => {
+    setDisciplineMode(mode);
+    setDisciplineMode(mode);
+  };
+
+  // Annotation handler for The Margins
+  const handleAddAnnotation = async (ann: { message_id: string; word: string; note: string }) => {
+    try {
+      const saved = await db.addAnnotation(ann.message_id, ann.word, ann.note);
+      setAnnotations(prev => [...prev, saved]);
+    } catch (e) {
+      console.error('Failed to save annotation:', e);
+    }
+  };
+
+  // Clearing handlers
+  const openClearing = () => {
+    setClearingOpen(true);
+    markClearingDiscovered();
+  };
+
+  const submitMessage = async () => {
     if (!authenticated || !input.trim() || isLoading) return;
 
     const userMessage = input.trim();
@@ -460,7 +558,7 @@ export default function ChatPage() {
       : userMessage;
 
     setInput('');
-    setActiveQuote(null); // Clear the quote after sending
+    setActiveQuote(null);
     setError(null);
     setIsLoading(true);
     window.dispatchEvent(new CustomEvent('serve-thinking-start'));
@@ -489,7 +587,6 @@ export default function ChatPage() {
       created_at: now,
     };
 
-
     const assistantMsg: UIMessage = {
       id: crypto.randomUUID(),
       role: 'assistant',
@@ -504,7 +601,6 @@ export default function ChatPage() {
       ...messages.map(m => ({ id: m.id, role: m.role, content: m.content })),
       { id: userMsg.id, role: 'user' as const, content: finalContent },
     ];
-
 
     // Variable typing rhythm state
     let tokenQueue: string[] = [];
@@ -524,12 +620,11 @@ export default function ChatPage() {
         return updated;
       });
 
-      // Variable delay: longer for newlines/periods (pause), shorter for regular tokens
-      let delay = 15; // base speed
-      if (token.includes('\n\n')) delay = 80; // paragraph break pause
-      else if (token.includes('\n')) delay = 40; // line break
-      else if (token.endsWith('.') || token.endsWith('—')) delay = 50; // sentence end
-      else if (token.endsWith('?') || token.endsWith('!')) delay = 60; // question/exclamation
+      let delay = 15;
+      if (token.includes('\n\n')) delay = 80;
+      else if (token.includes('\n')) delay = 40;
+      else if (token.endsWith('.') || token.endsWith('\u2014')) delay = 50;
+      else if (token.endsWith('?') || token.endsWith('!')) delay = 60;
 
       setTimeout(() => {
         processingQueue = false;
@@ -543,14 +638,11 @@ export default function ChatPage() {
       selectedModel,
       convId,
       selectedPersona,
-      // onToken — queue tokens for variable-rhythm delivery
       (token) => {
         tokenQueue.push(token);
         processTokenQueue();
       },
-      // onDone
       async (fullResponse) => {
-        // More robust Artifact detection (handles optional newlines and spaces)
         const artifactMatch = fullResponse.match(/:::artifact\[(.*?)\]\s*([\s\S]*?)\s*:::/);
         if (artifactMatch) {
           const newArtifact: Artifact = {
@@ -563,7 +655,6 @@ export default function ChatPage() {
           setArtifacts(prev => [newArtifact, ...prev]);
         }
 
-        // Flush remaining tokens immediately
         if (tokenQueue.length > 0) {
           const remaining = tokenQueue.join('');
           tokenQueue = [];
@@ -581,7 +672,6 @@ export default function ChatPage() {
         setIsLoading(false);
         window.dispatchEvent(new CustomEvent('serve-thinking-stop'));
 
-        // Generate smart title after 2nd message (first user + first assistant)
         if (convId && messages.length <= 1 && fullResponse) {
           const allMsgs: ChatMessage[] = [
             ...chatMessages,
@@ -589,17 +679,14 @@ export default function ChatPage() {
           ];
           const smartTitle = await generateTitle(allMsgs, selectedModel);
           if (smartTitle) {
-            // Generate semantic embedding for the title/context
             const { generateEmbedding } = await import('@/lib/embeddings');
             const embedding = await generateEmbedding(smartTitle + " " + userMessage);
             await db.updateConversationTitle(convId, smartTitle, embedding || []);
           }
-
         }
 
         loadConversations();
       },
-      // onError
       (errorMsg) => {
         setError(errorMsg);
         setIsLoading(false);
@@ -609,7 +696,6 @@ export default function ChatPage() {
         if (errorMsg.includes('Unauthorized')) {
           setAuthenticated(false);
         }
-        // Remove the empty assistant message
         setMessages(prev => {
           const updated = [...prev];
           if (updated.length > 0 && updated[updated.length - 1].role === 'assistant' && !updated[updated.length - 1].content) {
@@ -618,10 +704,9 @@ export default function ChatPage() {
           return updated;
         });
       },
-      fieldStudyContext?.content, // PASS CONTEXT HERE
+      fieldStudyContext?.content,
       currentWorkspaceId
     );
-
   };
 
   const displayedConversations = searchResults !== null ? searchResults : conversations;
@@ -631,6 +716,15 @@ export default function ChatPage() {
   return (
     <div className="flex h-full bg-[#0a0a0a] text-white selection:bg-white/10 overflow-hidden">
       {!authenticated && <AuthModal onAuthenticated={() => setAuthenticated(true)} />}
+
+      {/* The Clearing overlay */}
+      <TheClearing isOpen={clearingOpen} onClose={() => setClearingOpen(false)} />
+
+      {/* The Echo overlay */}
+      <TheEcho messages={messages} isActive={echoActive} />
+
+      {/* Farewell */}
+      <Farewell containerRef={chatContainerRef} />
 
       {/* Mobile sidebar overlay */}
       <AnimatePresence>
@@ -659,7 +753,7 @@ export default function ChatPage() {
             className="text-xl font-light text-white/80 hover:text-white transition-colors"
             title="Toggle sidebar (Ctrl+B)"
           >
-            ◈
+            &#9670;
           </button>
           {sidebarOpen && (
             <div className="ml-auto flex items-center gap-1">
@@ -742,7 +836,7 @@ export default function ChatPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col relative min-w-0">
+      <div className="flex-1 flex flex-col relative min-w-0" ref={chatContainerRef}>
         {/* Selection Menu (Ask SERVE) */}
         <AnimatePresence>
           {selectionMenu && (
@@ -811,7 +905,7 @@ export default function ChatPage() {
                       >
                         <div className="flex items-center justify-between">
                           <h3 className="text-[10px] font-medium text-white/60 tracking-wider uppercase">{artifact.title}</h3>
-                          <span className="text-[8px] text-white/10">{new Date(artifact.timestamp).toLocaleDateString()}</span>
+                          <span className="text-[8px] text-white/10">{formatPoeticTimestamp(artifact.timestamp)}</span>
                         </div>
                         <div className="text-[11px] leading-relaxed text-white/40 group-hover:text-white/80 transition-colors italic">
                           &quot;{artifact.content}&quot;
@@ -917,7 +1011,6 @@ export default function ChatPage() {
         </AnimatePresence>
 
         {/* Header */}
-
         <div className="h-12 flex items-center justify-between sm:justify-center px-4 sm:px-6 relative">
           {/* Mobile menu button */}
           <button
@@ -930,6 +1023,27 @@ export default function ChatPage() {
           <span className="text-xs text-white/20 tracking-[0.2em]">SERVE</span>
 
           <div className="flex items-center gap-1 sm:absolute sm:right-6">
+            {/* The Clearing button */}
+            <button
+              onClick={openClearing}
+              className={`p-2 transition-colors relative ${clearingDiscovered ? 'text-white/20 hover:text-white/60' : 'text-white/40 hover:text-white/80'}`}
+              title="The Clearing"
+            >
+              <PauseCircle className="w-4 h-4" />
+              {!clearingDiscovered && (
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-white/30 rounded-full animate-pulse" />
+              )}
+            </button>
+
+            {/* The Echo button */}
+            <button
+              onClick={toggleEcho}
+              className={`p-2 transition-colors ${echoActive ? 'text-white/60' : 'text-white/20 hover:text-white/60'}`}
+              title="The Echo (Shift+E)"
+            >
+              <Ear className="w-4 h-4" />
+            </button>
+
             <button
               onClick={() => setWorkspaceManagerOpen(true)}
               className="p-2 text-white/20 hover:text-white/60 transition-colors relative"
@@ -951,7 +1065,6 @@ export default function ChatPage() {
               )}
             </button>
             {currentConversationId && (
-
               <button
                 onClick={exportCurrentChat}
                 className="p-2 text-white/20 hover:text-white/60 transition-colors hidden sm:block"
@@ -970,7 +1083,7 @@ export default function ChatPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 sm:py-8" ref={messagesContainerRef}>
           {messages.length === 0 && !error ? (
             <div className="h-full flex flex-col items-center justify-center">
               <div className="text-center select-none space-y-6">
@@ -1003,96 +1116,118 @@ export default function ChatPage() {
             </div>
           ) : (
             <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
-              {messages.map((m) => (
-                <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : ''}>
-                  {m.role === 'user' ? (
-                    <div className="max-w-[90%] sm:max-w-[85%] message-content">
-                      <div className="text-white/50 text-sm leading-relaxed text-right">{m.content}</div>
-                      {m.created_at && <div className="text-[10px] text-white/8 mt-1.5 text-right">{timeAgo(m.created_at)}</div>}
-                    </div>
-                  ) : (
-                    <div className="group relative message-content">
-                      {/* The Loom Indicator */}
-
-                      {(m.content && (conversations.length > 1 || currentWorkspaceId)) && (
-                        <div className="absolute -left-8 top-1 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none hidden sm:block" title={currentWorkspaceId ? "Grounded in workspace patterns" : "Woven from past threads"}>
-                          {currentWorkspaceId ? <Layers className="w-3.5 h-3.5 text-white/10" /> : <History className="w-3.5 h-3.5 text-white/5" />}
-                        </div>
-                      )}
-                      <div className="text-[14px] sm:text-[15px] leading-[1.7] text-white/90" style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif' }}>
-
-                        <ReactMarkdown
-                          components={{
-                            p({ children }) { 
-                              // Robustly convert children to string to check for artifact syntax
-                              const content = Array.isArray(children) 
-                                ? children.map(c => typeof c === 'string' ? c : '').join('')
-                                : typeof children === 'string' ? children : '';
-
-                              if (content.includes(':::artifact')) {
-                                const titleMatch = content.match(/\[(.*?)\]/);
-                                const title = titleMatch ? titleMatch[1] : 'Crystallized Insight';
-                                
-                                return (
-                                  <motion.div 
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="my-6 p-4 rounded-xl border border-white/10 bg-white/[0.03] flex items-center justify-between group cursor-pointer hover:border-white/20 transition-all duration-500"
-                                    onClick={() => setReliquaryOpen(true)}
-                                  >
-                                    <div className="flex items-center gap-3 sm:gap-4">
-                                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/5">
-                                        <Quote className="w-3 h-3 sm:w-4 sm:h-4 text-white/40 group-hover:text-white/80 transition-colors" />
-                                      </div>
-                                      <div>
-                                        <div className="text-[10px] uppercase tracking-[0.2em] text-white/20 mb-1">Artifact</div>
-                                        <div className="text-xs text-white/60 group-hover:text-white transition-colors italic">{title}</div>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-[10px] text-white/20 group-hover:text-white/40 transition-colors">
-                                      <span className="hidden sm:inline">View Insight</span>
-                                      <ChevronRight className="w-3 h-3" />
-                                    </div>
-                                  </motion.div>
-                                );
-                              }
-                              return <p className="mb-4">{children}</p>; 
-                            },
-                            h1({ children }) { return <h1 className="text-lg font-normal text-white mt-6 mb-3">{children}</h1>; },
-
-                            h2({ children }) { return <h2 className="text-base font-normal text-white mt-5 mb-2">{children}</h2>; },
-                            h3({ children }) { return <h3 className="text-sm font-normal text-white mt-4 mb-2">{children}</h3>; },
-                            ul({ children }) { return <ul className="list-disc pl-5 mb-4 space-y-1">{children}</ul>; },
-                            ol({ children }) { return <ol className="list-decimal pl-5 mb-4 space-y-1">{children}</ol>; },
-                            li({ children }) { return <li className="text-white/80">{children}</li>; },
-                            strong({ children }) { return <strong className="text-white font-normal">{children}</strong>; },
-
-                            blockquote({ children }) { return <blockquote className="border-l border-white/20 pl-4 italic text-white/60 my-4">{children}</blockquote>; },
-                            code({ node, inline, className, children, ...props }: any) {
-                              const match = /language-(\w+)/.exec(className || '');
-                              return !inline && match ? (
-                                <CodeBlock language={match[1]}>{String(children).replace(/\n$/, '')}</CodeBlock>
-                              ) : (
-                                <code className="bg-white/5 px-1.5 py-0.5 rounded text-sm font-mono text-white/70" {...props}>
-                                  {children}
-                                </code>
-                              );
-                            },
-                          }}
-                        >
-                          {m.content}
-                        </ReactMarkdown>
-                      </div>
-                      {m.created_at && m.content && <div className="text-[10px] text-white/10 mt-1">{timeAgo(m.created_at)}</div>}
-                    </div>
+              {messages.map((m, i) => (
+                <div key={m.id}>
+                  {/* The Silence Between */}
+                  {i > 0 && (
+                    <SilenceBetween
+                      prevCreatedAt={messages[i - 1].created_at}
+                      nextCreatedAt={m.created_at}
+                    />
                   )}
+                  <div className={m.role === 'user' ? 'flex justify-end' : ''}>
+                    {m.role === 'user' ? (
+                      <div
+                        className={`max-w-[90%] sm:max-w-[85%] message-content ${ephemeralMode ? 'ephemeral-message' : ''}`}
+                        data-ephemeral={ephemeralMode ? 'true' : undefined}
+                        data-artifact={hasArtifact(m.content) ? 'true' : undefined}
+                      >
+                        <div className="text-white/50 text-sm leading-relaxed text-right">{m.content}</div>
+                        {m.created_at && <div className="text-[10px] text-white/8 mt-1.5 text-right">{formatPoeticTimestamp(m.created_at)}</div>}
+                      </div>
+                    ) : (
+                      <div className="group relative message-content">
+                        {/* The Loom Indicator */}
+                        {(m.content && (conversations.length > 1 || currentWorkspaceId)) && (
+                          <div className="absolute -left-8 top-1 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none hidden sm:block" title={currentWorkspaceId ? "Grounded in workspace patterns" : "Woven from past threads"}>
+                            {currentWorkspaceId ? <Layers className="w-3.5 h-3.5 text-white/10" /> : <History className="w-3.5 h-3.5 text-white/5" />}
+                          </div>
+                        )}
+                        <TheMargins
+                          messageId={m.id}
+                          annotations={annotations}
+                          onAddAnnotation={handleAddAnnotation}
+                        >
+                          <div
+                            className={`text-[14px] sm:text-[15px] leading-[1.7] text-white/90 ${ephemeralMode ? 'ephemeral-message' : ''}`}
+                            data-ephemeral={ephemeralMode ? 'true' : undefined}
+                            data-artifact={hasArtifact(m.content) ? 'true' : undefined}
+                            style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif' }}
+                          >
+                            <ReactMarkdown
+                            components={{
+                              p({ children }) { 
+                                const content = Array.isArray(children) 
+                                  ? children.map(c => typeof c === 'string' ? c : '').join('')
+                                  : typeof children === 'string' ? children : '';
+
+                                if (content.includes(':::artifact')) {
+                                  const titleMatch = content.match(/\[(.*?)\]/);
+                                  const title = titleMatch ? titleMatch[1] : 'Crystallized Insight';
+                                  
+                                  return (
+                                    <motion.div 
+                                      initial={{ opacity: 0, scale: 0.95 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      className="my-6 p-4 rounded-xl border border-white/10 bg-white/[0.03] flex items-center justify-between group cursor-pointer hover:border-white/20 transition-all duration-500"
+                                      onClick={() => setReliquaryOpen(true)}
+                                    >
+                                      <div className="flex items-center gap-3 sm:gap-4">
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/5">
+                                          <Quote className="w-3 h-3 sm:w-4 sm:h-4 text-white/40 group-hover:text-white/80 transition-colors" />
+                                        </div>
+                                        <div>
+                                          <div className="text-[10px] uppercase tracking-[0.2em] text-white/20 mb-1">Artifact</div>
+                                          <div className="text-xs text-white/60 group-hover:text-white transition-colors italic">{title}</div>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2 text-[10px] text-white/20 group-hover:text-white/40 transition-colors">
+                                        <span className="hidden sm:inline">View Insight</span>
+                                        <ChevronRight className="w-3 h-3" />
+                                      </div>
+                                    </motion.div>
+                                  );
+                                }
+                                return <p className="mb-4">{children}</p>; 
+                              },
+                              h1({ children }) { return <h1 className="text-lg font-normal text-white mt-6 mb-3">{children}</h1>; },
+                              h2({ children }) { return <h2 className="text-base font-normal text-white mt-5 mb-2">{children}</h2>; },
+                              h3({ children }) { return <h3 className="text-sm font-normal text-white mt-4 mb-2">{children}</h3>; },
+                              ul({ children }) { return <ul className="list-disc pl-5 mb-4 space-y-1">{children}</ul>; },
+                              ol({ children }) { return <ol className="list-decimal pl-5 mb-4 space-y-1">{children}</ol>; },
+                              li({ children }) { return <li className="text-white/80">{children}</li>; },
+                              strong({ children }) { return <strong className="text-white font-normal">{children}</strong>; },
+                              blockquote({ children }) { return <blockquote className="border-l border-white/20 pl-4 italic text-white/60 my-4">{children}</blockquote>; },
+                              code({ node, inline, className, children, ...props }: any) {
+                                const match = /language-(\w+)/.exec(className || '');
+                                return !inline && match ? (
+                                  <CodeBlock language={match[1]}>{String(children).replace(/\n$/, '')}</CodeBlock>
+                                ) : (
+                                  <code className="bg-white/5 px-1.5 py-0.5 rounded text-sm font-mono text-white/70" {...props}>
+                                    {children}
+                                  </code>
+                                );
+                              },
+                            }}
+                          >
+                            {m.content}
+                          </ReactMarkdown>
+                          </div>
+                        </TheMargins>
+                        {m.created_at && m.content && (
+                          <div className="text-[10px] text-white/10 mt-1">{formatPoeticTimestamp(m.created_at)}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
-              {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !messages[messages.length - 1].content && (
-                <div className="py-6 text-white/20 text-sm italic">
-                  ...
-                </div>
-              )}
+
+              {/* Threshold States loading indicator */}
+              <ThresholdStates
+                isLoading={isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !messages[messages.length - 1].content}
+              />
+
               {error && (
                 <div className="text-sm text-red-400/80 py-2">
                   {error}
@@ -1106,14 +1241,31 @@ export default function ChatPage() {
         {/* Input Area */}
         <div className="p-4 sm:p-6 pb-6 sm:pb-10">
           <div className="max-w-2xl mx-auto">
+            {/* Discipline warning */}
+            <AnimatePresence>
+              {disciplineWarning && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-2 text-[10px] text-white/25 italic text-right"
+                >
+                  {disciplineWarning}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Input with inline persona label */}
             <div className="relative">
               <textarea
                 ref={inputRef}
-                className="w-full bg-transparent border border-white/10 rounded-lg pl-4 pr-12 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-none overflow-hidden"
-                placeholder={getPersona(selectedPersona).placeholder[placeholderIndex % getPersona(selectedPersona).placeholder.length]}
+                className={`w-full bg-transparent border rounded-lg pl-4 pr-12 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-all resize-none overflow-hidden weight-glow ${getDisciplineInputClass(disciplineMode)} ${getWeightBorderClass(weightResult)} ${getWeightShadowClass(weightResult)}`}
+                placeholder={getDisciplinePlaceholder(
+                  getPersona(selectedPersona).placeholder[placeholderIndex % getPersona(selectedPersona).placeholder.length],
+                  disciplineMode
+                )}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 rows={1}
                 style={{ minHeight: '48px', maxHeight: '200px' }}
@@ -1124,13 +1276,19 @@ export default function ChatPage() {
                 }}
               />
               <div className="absolute right-3 top-3 flex items-center gap-2">
+                {/* Discipline counter for 140-char mode */}
+                {disciplineMode === '140-chars' && (
+                  <span className={`text-[10px] ${input.length > 140 ? 'text-white/40' : 'text-white/15'}`}>
+                    {input.length}/140
+                  </span>
+                )}
                 <label className="cursor-pointer p-1 text-white/10 hover:text-white/40 transition-colors" title="Field Study (The Lens)">
                   <FileText className={`w-4 h-4 ${fieldStudyContext ? 'text-white/60' : ''}`} />
                   <input type="file" className="hidden" accept=".txt,.md,.json,.csv" onChange={handleFieldStudyUpload} />
                 </label>
               </div>
             </div>
-            {/* Persona selector — subtle, always visible, Nenspace-style below input */}
+            {/* Persona selector */}
             <div className="flex items-center justify-end mt-2 gap-3">
               <div className="relative group">
                 <button
@@ -1140,7 +1298,7 @@ export default function ChatPage() {
                   }}
                   className="text-[11px] text-white/25 hover:text-white/50 transition-colors tracking-wide lowercase"
                 >
-                  {getPersona(selectedPersona).name.toLowerCase()} <span className="text-white/15">▾</span>
+                  {getPersona(selectedPersona).name.toLowerCase()} <span className="text-white/15">&#9662;</span>
                 </button>
                 <div id="persona-dropdown" className="hidden absolute bottom-full right-0 mb-2 bg-[#111] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 min-w-[180px]">
                   {PERSONAS.map(p => (
@@ -1196,15 +1354,14 @@ export default function ChatPage() {
             )}
 
             <div className="flex justify-between mt-2 text-[10px] text-white/10">
-              <span className="hidden sm:inline">Ctrl+N new · Ctrl+K search · / focus</span>
-              <span className="sm:hidden">Tap ◈ for menu</span>
-              <span>{selectedModel}{messages.length === 0 ? ` · ${PERSONAS.find(p => p.id === selectedPersona)?.name || 'SERVE'}` : ''}</span>
+              <span className="hidden sm:inline">Ctrl+N new &#183; Ctrl+K search &#183; / focus</span>
+              <span className="sm:hidden">Tap &#9670; for menu</span>
+              <span>{selectedModel}{messages.length === 0 ? ` &#183; ${PERSONAS.find(p => p.id === selectedPersona)?.name || 'SERVE'}` : ''}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Settings Modal */}
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1215,7 +1372,7 @@ export default function ChatPage() {
                 onClick={() => setShowSettings(false)}
                 className="text-white/40 hover:text-white transition-colors"
               >
-                ✕
+                &#10005;
               </button>
             </div>
 
@@ -1285,6 +1442,48 @@ export default function ChatPage() {
                 </button>
               </div>
 
+              {/* Ephemeral Mode Toggle */}
+              <div>
+                <label className="text-[10px] text-white/40 uppercase tracking-wider mb-2 block">Atmosphere</label>
+                <button
+                  onClick={toggleEphemeral}
+                  className={`w-full flex items-center justify-between px-3 py-2 border rounded-md transition-all duration-300 ${ephemeralMode 
+                    ? 'bg-white/5 border-white/20 text-white' 
+                    : 'bg-transparent border-white/5 text-white/20 hover:border-white/10'}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs">Ephemeral</span>
+                  </div>
+                  <div className={`w-1.5 h-1.5 rounded-full ${ephemeralMode ? 'bg-white/40 animate-pulse' : 'bg-white/5'}`} />
+                </button>
+                <p className="text-[10px] text-white/15 mt-1">Messages fade over time. Hover to restore.</p>
+              </div>
+
+              {/* The Discipline Toggle */}
+              <div>
+                <label className="text-[10px] text-white/40 uppercase tracking-wider mb-2 block">The Discipline</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => toggleDiscipline('one-sentence')}
+                    className={`flex-1 px-3 py-2 border rounded-md text-xs transition-all duration-300 ${disciplineMode === 'one-sentence'
+                      ? 'bg-white/5 border-white/20 text-white'
+                      : 'bg-transparent border-white/5 text-white/20 hover:border-white/10'
+                      }`}
+                  >
+                    One Sentence
+                  </button>
+                  <button
+                    onClick={() => toggleDiscipline('140-chars')}
+                    className={`flex-1 px-3 py-2 border rounded-md text-xs transition-all duration-300 ${disciplineMode === '140-chars'
+                      ? 'bg-white/5 border-white/20 text-white'
+                      : 'bg-transparent border-white/5 text-white/20 hover:border-white/10'
+                      }`}
+                  >
+                    140 Characters
+                  </button>
+                </div>
+                <p className="text-[10px] text-white/15 mt-1">Soft constraints for focused expression.</p>
+              </div>
 
               {/* Keyboard Shortcuts */}
               <div className="hidden sm:block">
@@ -1296,6 +1495,7 @@ export default function ChatPage() {
                   <div className="flex justify-between text-white/30"><span>Settings</span><kbd className="text-white/20 bg-white/5 px-1 rounded">Ctrl+,</kbd></div>
                   <div className="flex justify-between text-white/30"><span>Export chat</span><kbd className="text-white/20 bg-white/5 px-1 rounded">Ctrl+Shift+E</kbd></div>
                   <div className="flex justify-between text-white/30"><span>Focus input</span><kbd className="text-white/20 bg-white/5 px-1 rounded">/</kbd></div>
+                  <div className="flex justify-between text-white/30"><span>The Echo</span><kbd className="text-white/20 bg-white/5 px-1 rounded">Shift+E</kbd></div>
                 </div>
               </div>
 
@@ -1324,4 +1524,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
