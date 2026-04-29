@@ -12,6 +12,18 @@ export const metadata: Metadata = {
     title: "SERVE — AI that sees patterns",
     description: "A quiet space for conversations that matter.",
     type: "website",
+    images: [{
+      url: "/og-image.png",
+      width: 1200,
+      height: 630,
+      alt: "SERVE — AI that sees patterns",
+    }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SERVE — AI that sees patterns",
+    description: "A quiet space for conversations that matter.",
+    images: ["/og-image.png"],
   },
 };
 
