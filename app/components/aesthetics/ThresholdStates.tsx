@@ -27,10 +27,7 @@ export function ThresholdStates({ isLoading }: ThresholdStatesProps) {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    if (!isLoading) {
-      setIndex(0);
-      return;
-    }
+    if (!isLoading) return;
 
     const interval = setInterval(() => {
       setIndex(prev => (prev + 1) % THRESHOLD_WORDS.length);

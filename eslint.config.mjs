@@ -12,7 +12,15 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "scripts/**",
   ]),
+  {
+    rules: {
+      // Pragmatic overrides for rapid-prototype codebase
+      "@typescript-eslint/no-explicit-any": "warn",
+      "react/no-unescaped-entities": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

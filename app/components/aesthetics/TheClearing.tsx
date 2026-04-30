@@ -7,13 +7,12 @@ import gsap from 'gsap';
 const CLEARING_DISCOVERED_KEY = 'serve:clearing-discovered';
 
 export function useClearingDiscovered(): boolean {
-  const [discovered, setDiscovered] = useState(false);
-
-  useEffect(() => {
+  const [discovered] = useState(() => {
     if (typeof window !== 'undefined') {
-      setDiscovered(localStorage.getItem(CLEARING_DISCOVERED_KEY) === 'true');
+      return localStorage.getItem(CLEARING_DISCOVERED_KEY) === 'true';
     }
-  }, []);
+    return false;
+  });
 
   return discovered;
 }
