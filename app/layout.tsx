@@ -3,11 +3,17 @@ import "./globals.css";
 import { TitleBar } from "./components/TitleBar";
 import { AtmosphereLayer } from "./components/AtmosphereLayer";
 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://serve.app';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(BASE_URL),
   title: "SERVE — AI that sees patterns",
   description: "A quiet space for conversations that matter. SERVE speaks with earned authority — pattern recognition, parables, and the hard questions beneath the surface.",
   keywords: ["AI", "chat", "minimalist", "conversational AI", "SERVE"],
   authors: [{ name: "SERVE" }],
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     title: "SERVE — AI that sees patterns",
     description: "A quiet space for conversations that matter.",
