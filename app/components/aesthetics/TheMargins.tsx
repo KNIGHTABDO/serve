@@ -68,7 +68,19 @@ export function TheMargins({ messageId, annotations, onAddAnnotation, children }
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed) {
         // If no text selected, try to select the word under touch
-        const range = document.caretRangeFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+        const touch = e.touches[0];
+        let range: Range | null = null;
+        if (document.caretRangeFromPoint) {
+          range = document.caretRangeFromPoint(touch.clientX, touch.clientY);
+        } else if ((document as any).createRange) {
+          // Fallback for Firefox
+          const caretPos = document.elementFromPoint(touch.clientX, touch.clientY);
+          if (caretPos && caretPos.firstChild) {
+            range = document.createRange();
+            range.setStart(caretPos.firstChild, 0);
+            range.setEnd(caretPos.firstChild, 0);
+          }
+        }
         if (range) {
           selection?.removeAllRanges();
           selection?.addRange(range);
@@ -94,7 +106,7 @@ export function TheMargins({ messageId, annotations, onAddAnnotation, children }
         setSelectedWord(word);
         setShowInput(false);
       }
-    }, 600);
+    }, 400);
 
     const clear = () => clearTimeout(timer);
     target.addEventListener('touchend', clear, { once: true });
@@ -161,8 +173,9 @@ export function TheMargins({ messageId, annotations, onAddAnnotation, children }
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.2 }}
             onClick={handleAddClick}
-            className="absolute right-0 -mr-6 sm:-mr-8 top-0 text-white/20 hover:text-white/50 text-xs transition-colors"
+            className="absolute right-0 top-0 text-white/20 hover:text-white/50 text-xs transition-colors p-1 min-w-[24px] min-h-[24px] flex items-center justify-center"
             title="Add annotation"
+            aria-label="Add annotation"
           >
             +
           </motion.button>
@@ -178,7 +191,7 @@ export function TheMargins({ messageId, annotations, onAddAnnotation, children }
             exit={{ opacity: 0, width: 0 }}
             transition={{ duration: 0.2 }}
             onSubmit={handleSubmit}
-            className="absolute right-0 -mr-2 sm:-mr-4 top-0 flex items-center gap-2"
+            className="absolute right-0 top-0 flex items-center gap-2 bg-[#0a0a0a] px-2 py-1 rounded border border-white/5"
           >
             <input
               ref={inputRef}
@@ -189,9 +202,10 @@ export function TheMargins({ messageId, annotations, onAddAnnotation, children }
                 if (e.key === 'Escape') handleCancel();
               }}
               placeholder={`Note on "${selectedWord}"...`}
-              className="bg-transparent border-b border-white/20 text-white/50 text-xs focus:outline-none focus:border-white/40 w-32 sm:w-48 placeholder:text-white/10"
+              className="bg-transparent border-b border-white/20 text-white/50 text-xs focus:outline-none focus:border-white/40 w-40 sm:w-48 placeholder:text-white/10"
+              aria-label={`Add note for ${selectedWord}`}
             />
-            <button type="submit" className="text-white/20 hover:text-white/50 text-xs">
+            <button type="submit" className="text-white/20 hover:text-white/50 text-xs px-1">
               enter
             </button>
           </motion.form>

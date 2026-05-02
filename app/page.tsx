@@ -133,7 +133,7 @@ export default function LandingPage() {
     <div id="landing-scroll-container" ref={container} className="h-full bg-black text-white relative isolate overflow-y-auto overflow-x-hidden selection:bg-white/20">
 
       {/* Floating Global CTA */}
-      <div className="fixed top-6 right-6 z-50">
+      <div className="fixed top-6 right-6 z-50 max-w-[calc(100%-3rem)]">
         <Link 
           href="/chat"
           className="group flex items-center gap-3 px-5 py-2 border border-white/10 bg-black/50 backdrop-blur-md text-[10px] tracking-[0.2em] text-white/50 hover:text-white hover:border-white/30 transition-all duration-300"

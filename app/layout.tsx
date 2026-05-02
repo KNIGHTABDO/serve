@@ -53,10 +53,13 @@ export default function RootLayout({
         className="antialiased bg-black text-white flex flex-col h-screen overflow-hidden"
         style={{ fontFamily: "Inter, system-ui, sans-serif" }}
       >
-        <div className="atmosphere-layer" id="atmosphere-layer" />
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-white focus:text-black focus:px-3 focus:py-2 focus:text-xs focus:rounded">
+          Skip to content
+        </a>
+        <div className="atmosphere-layer" id="atmosphere-layer" aria-hidden="true" />
         <AtmosphereLayer />
         <TitleBar />
-        <div className="flex-1 overflow-hidden">
+        <div id="main-content" className="flex-1 overflow-hidden" role="main">
           {children}
         </div>
       </body>

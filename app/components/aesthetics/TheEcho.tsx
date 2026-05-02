@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 
 interface UIMessage {
   id: string;
@@ -13,6 +14,7 @@ interface UIMessage {
 interface TheEchoProps {
   messages: UIMessage[];
   isActive: boolean;
+  onClose?: () => void;
 }
 
 /**
@@ -20,7 +22,7 @@ interface TheEchoProps {
  * Strips user messages, renders only assistant messages as plain prose.
  * Toggle via Shift+E or header button. Not persisted.
  */
-export function TheEcho({ messages, isActive }: TheEchoProps) {
+export function TheEcho({ messages, isActive, onClose }: TheEchoProps) {
   const assistantMessages = messages.filter(m => m.role === 'assistant');
 
   if (!isActive) return null;
@@ -31,9 +33,23 @@ export function TheEcho({ messages, isActive }: TheEchoProps) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="absolute inset-0 bg-[#0a0a0a] z-[55] overflow-y-auto px-4 sm:px-6 py-8"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="echo-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose?.();
+      }}
     >
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="fixed top-4 right-4 z-[60] p-2 text-white/20 hover:text-white/60 transition-colors"
+        aria-label="Close The Echo"
+      >
+        <X className="w-5 h-5" />
+      </button>
       <div className="max-w-2xl mx-auto">
-        <div className="text-[10px] uppercase tracking-[0.3em] text-white/15 text-center mb-12 select-none">
+        <div id="echo-title" className="text-[10px] uppercase tracking-[0.3em] text-white/15 text-center mb-12 select-none">
           The Echo
         </div>
         <div className="text-[10px] uppercase tracking-[0.2em] text-white/10 text-center mb-16 select-none">

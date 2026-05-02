@@ -197,9 +197,19 @@ export default function ChatPage() {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
 
+      const menuWidth = 160; // approximate menu width
+      const menuHeight = 40; // approximate menu height
+      let x = rect.left + rect.width / 2;
+      let y = rect.top - 40;
+
+      // Clamp to viewport boundaries
+      const padding = 8;
+      x = Math.max(menuWidth / 2 + padding, Math.min(x, window.innerWidth - menuWidth / 2 - padding));
+      y = Math.max(menuHeight + padding, Math.min(y, window.innerHeight - padding));
+
       setSelectionMenu({
-        x: rect.left + rect.width / 2,
-        y: rect.top - 40,
+        x,
+        y,
         text: selection.toString().trim()
       });
     }, 10);
@@ -238,6 +248,13 @@ export default function ChatPage() {
     checkAuth();
     loadConversations();
     loadWorkspaces();
+
+    // Listen for auth modal close to re-check auth state
+    const handleAuthClose = () => {
+      setLoadingAuth(false);
+    };
+    window.addEventListener('serve-auth-modal-close', handleAuthClose);
+    return () => window.removeEventListener('serve-auth-modal-close', handleAuthClose);
   }, []);
 
   useEffect(() => {
@@ -721,7 +738,7 @@ export default function ChatPage() {
       <TheClearing isOpen={clearingOpen} onClose={() => setClearingOpen(false)} />
 
       {/* The Echo overlay */}
-      <TheEcho messages={messages} isActive={echoActive} />
+      <TheEcho messages={messages} isActive={echoActive} onClose={toggleEcho} />
 
       {/* Farewell */}
       <Farewell containerRef={chatContainerRef} />
@@ -786,6 +803,7 @@ export default function ChatPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search conversations..."
+                aria-label="Search conversations"
                 className="w-full bg-white/5 border border-white/10 rounded-md pl-8 pr-8 py-1.5 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
               />
               {searchQuery && (
@@ -823,8 +841,9 @@ export default function ChatPage() {
                   </div>
                   <button
                     onClick={(e) => deleteConversationHandler(conv.id, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:text-white/80 transition-all flex-shrink-0"
+                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 hover:text-white/80 transition-all flex-shrink-0"
                     title="Delete"
+                    aria-label={`Delete conversation ${conv.title || 'Untitled'}`}
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -1026,8 +1045,9 @@ export default function ChatPage() {
             {/* The Clearing button */}
             <button
               onClick={openClearing}
-              className={`p-2 transition-colors relative ${clearingDiscovered ? 'text-white/20 hover:text-white/60' : 'text-white/40 hover:text-white/80'}`}
+              className={`p-2.5 md:p-2 transition-colors relative ${clearingDiscovered ? 'text-white/20 hover:text-white/60' : 'text-white/40 hover:text-white/80'}`}
               title="The Clearing"
+              aria-label="Open The Clearing"
             >
               <PauseCircle className="w-4 h-4" />
               {!clearingDiscovered && (
@@ -1038,16 +1058,18 @@ export default function ChatPage() {
             {/* The Echo button */}
             <button
               onClick={toggleEcho}
-              className={`p-2 transition-colors ${echoActive ? 'text-white/60' : 'text-white/20 hover:text-white/60'}`}
+              className={`p-2.5 md:p-2 transition-colors ${echoActive ? 'text-white/60' : 'text-white/20 hover:text-white/60'}`}
               title="The Echo (Shift+E)"
+              aria-label="Toggle The Echo"
             >
               <Ear className="w-4 h-4" />
             </button>
 
             <button
               onClick={() => setWorkspaceManagerOpen(true)}
-              className="p-2 text-white/20 hover:text-white/60 transition-colors relative"
+              className="p-2.5 md:p-2 text-white/20 hover:text-white/60 transition-colors relative"
               title="Workspaces (Ctrl+W)"
+              aria-label="Open Workspaces"
             >
               <Database className={`w-4 h-4 ${currentWorkspaceId ? 'text-white/40' : ''}`} />
               {currentWorkspaceId && (
@@ -1056,8 +1078,9 @@ export default function ChatPage() {
             </button>
             <button
               onClick={() => setReliquaryOpen(true)}
-              className="p-2 text-white/20 hover:text-white/60 transition-colors relative"
+              className="p-2.5 md:p-2 text-white/20 hover:text-white/60 transition-colors relative"
               title="The Reliquary"
+              aria-label="Open The Reliquary"
             >
               <Bookmark className="w-4 h-4" />
               {artifacts.length > 0 && (
@@ -1067,15 +1090,17 @@ export default function ChatPage() {
             {currentConversationId && (
               <button
                 onClick={exportCurrentChat}
-                className="p-2 text-white/20 hover:text-white/60 transition-colors hidden sm:block"
+                className="p-2.5 md:p-2 text-white/20 hover:text-white/60 transition-colors hidden sm:block"
                 title="Export conversation (Ctrl+Shift+E)"
+                aria-label="Export conversation"
               >
                 <Download className="w-4 h-4" />
               </button>
             )}
             <button
               onClick={() => setShowSettings(true)}
-              className="p-2 text-white/20 hover:text-white/60 transition-colors"
+              className="p-2.5 md:p-2 text-white/20 hover:text-white/60 transition-colors"
+              aria-label="Open settings"
             >
               <Settings className="w-4 h-4" />
             </button>
@@ -1269,6 +1294,7 @@ export default function ChatPage() {
                 onKeyDown={handleKeyDown}
                 rows={1}
                 style={{ minHeight: '48px', maxHeight: '200px' }}
+                aria-label="Message input"
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement;
                   target.style.height = 'auto';
@@ -1290,34 +1316,22 @@ export default function ChatPage() {
             </div>
             {/* Persona selector */}
             <div className="flex items-center justify-end mt-2 gap-3">
-              <div className="relative group">
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('persona-dropdown');
-                    if (el) el.classList.toggle('hidden');
-                  }}
-                  className="text-[11px] text-white/25 hover:text-white/50 transition-colors tracking-wide lowercase"
+              <div className="relative">
+                <label htmlFor="persona-select" className="sr-only">Select persona</label>
+                <select
+                  id="persona-select"
+                  value={selectedPersona}
+                  onChange={(e) => setSelectedPersona(e.target.value)}
+                  className="appearance-none bg-transparent text-[11px] text-white/25 hover:text-white/50 transition-colors tracking-wide lowercase cursor-pointer border border-white/5 rounded px-2 py-1 pr-6 focus:outline-none focus:border-white/20"
+                  aria-label="Select persona"
                 >
-                  {getPersona(selectedPersona).name.toLowerCase()} <span className="text-white/15">&#9662;</span>
-                </button>
-                <div id="persona-dropdown" className="hidden absolute bottom-full right-0 mb-2 bg-[#111] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 min-w-[180px]">
                   {PERSONAS.map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => {
-                        setSelectedPersona(p.id);
-                        document.getElementById('persona-dropdown')?.classList.add('hidden');
-                      }}
-                      className={`w-full text-left px-4 py-2.5 transition-all ${selectedPersona === p.id
-                        ? 'bg-white/5 text-white/80'
-                        : 'text-white/40 hover:bg-white/[0.03] hover:text-white/60'
-                        }`}
-                    >
-                      <div className="text-xs font-medium">{p.name}</div>
-                      <div className="text-[10px] text-white/25 mt-0.5">{p.description}</div>
-                    </button>
+                    <option key={p.id} value={p.id} className="bg-[#111] text-white/80">
+                      {p.name.toLowerCase()} — {p.description}
+                    </option>
                   ))}
-                </div>
+                </select>
+                <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-white/15 pointer-events-none text-[8px]">&#9662;</span>
               </div>
             </div>
             {/* Active Quote Context Bar */}
@@ -1364,13 +1378,22 @@ export default function ChatPage() {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowSettings(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="settings-modal-title"
+        >
           <div className="bg-[#111] border border-white/10 rounded-xl w-full max-w-md p-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-light">Settings</h2>
+              <h2 id="settings-modal-title" className="text-base font-light">Settings</h2>
               <button
                 onClick={() => setShowSettings(false)}
-                className="text-white/40 hover:text-white transition-colors"
+                className="text-white/40 hover:text-white transition-colors p-1"
+                aria-label="Close settings"
               >
                 &#10005;
               </button>
@@ -1385,6 +1408,7 @@ export default function ChatPage() {
                     <input
                       type="text"
                       placeholder="Search models..."
+                      aria-label="Search models"
                       className="w-full bg-transparent text-xs text-white placeholder:text-white/20 focus:outline-none"
                       onChange={(e) => {
                         const val = e.target.value.toLowerCase();

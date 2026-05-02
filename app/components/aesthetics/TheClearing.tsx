@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 import gsap from 'gsap';
 
 const CLEARING_DISCOVERED_KEY = 'serve:clearing-discovered';
@@ -72,7 +73,18 @@ export function TheClearing({ isOpen, onClose }: TheClearingProps) {
           transition={{ duration: 1.5 }}
           onClick={onClose}
           className="fixed inset-0 bg-black z-[100] flex items-center justify-center cursor-pointer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="The Clearing - tap anywhere to close"
         >
+          {/* Close button for mobile accessibility */}
+          <button
+            onClick={onClose}
+            className="absolute top-6 right-6 text-white/20 hover:text-white/50 transition-colors p-2 z-[101]"
+            aria-label="Close The Clearing"
+          >
+            <X className="w-5 h-5" />
+          </button>
           <div
             ref={circleRef}
             className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border border-white/20 opacity-30"

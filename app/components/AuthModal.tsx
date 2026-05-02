@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Loader2, Copy, Check, ExternalLink, Github } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Loader2, Copy, Check, ExternalLink, Github, X } from 'lucide-react';
 import { startDeviceFlow, checkTokenStatus } from '@/lib/auth';
 
 interface AuthModalProps {
@@ -15,6 +15,8 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const startLogin = async () => {
     setLoading(true);
@@ -97,15 +99,82 @@ export function AuthModal({ onAuthenticated }: AuthModalProps) {
     window.open(url, '_blank');
   };
 
+  const handleClose = () => {
+    // Only allow close if not in the middle of a successful auth flow
+    if (step === 'success') return;
+    // Return focus to the previously focused element
+    if (previousFocusRef.current) {
+      previousFocusRef.current.focus();
+    }
+    // Dispatch a custom event that the parent can listen for
+    window.dispatchEvent(new CustomEvent('serve-auth-modal-close'));
+  };
+
+  // Store previous focus and handle Escape key
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [step]);
+
+  // Focus trap
+  useEffect(() => {
+    if (!modalRef.current) return;
+    const modal = modalRef.current;
+    const focusableElements = modal.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey && document.activeElement === firstElement) {
+        e.preventDefault();
+        lastElement?.focus();
+      } else if (!e.shiftKey && document.activeElement === lastElement) {
+        e.preventDefault();
+        firstElement?.focus();
+      }
+    };
+
+    modal.addEventListener('keydown', handleTabKey);
+    firstElement?.focus();
+    return () => modal.removeEventListener('keydown', handleTabKey);
+  }, [step]);
+
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[#111] border border-white/10 p-6 sm:p-8 rounded-2xl w-full max-w-md shadow-2xl">
+    <div
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="auth-modal-title"
+    >
+      <div ref={modalRef} className="bg-[#111] border border-white/10 p-6 sm:p-8 rounded-2xl w-full max-w-md shadow-2xl relative">
+        {/* Close button */}
+        {step !== 'success' && (
+          <button
+            onClick={handleClose}
+            className="absolute top-4 right-4 text-white/20 hover:text-white/60 transition-colors p-1"
+            aria-label="Close authentication dialog"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
         <div className="flex flex-col items-center text-center space-y-6">
           <div className="p-4 bg-white/5 rounded-full">
             <Github className="w-8 h-8 text-white" />
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-light tracking-wide text-white">
+          <h2 id="auth-modal-title" className="text-xl sm:text-2xl font-light tracking-wide text-white">
             {step === 'start' && "Connect Copilot"}
             {step === 'device' && "Authorize Device"}
             {step === 'success' && "Connected"}
