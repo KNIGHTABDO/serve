@@ -5,15 +5,31 @@ import { Scene } from "./components/canvas/Scene";
 
 export default function Home() {
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden selection:bg-white/20 font-sans">
+    <div className="relative w-full h-[100dvh] bg-black overflow-hidden selection:bg-white/20 font-sans">
       <div className="noise z-50 mix-blend-overlay opacity-10 pointer-events-none" />
+
+      {/* Global Fixed Navigation */}
+      <nav className="fixed top-6 left-6 right-6 z-50 flex justify-between items-start pointer-events-none">
+        <div className="pointer-events-auto">
+          {/* We already have a logo in the center on hero, but we can put a tiny subtle wordmark here */}
+          <Link href="/" className="text-[10px] text-white/40 tracking-[0.4em] uppercase hover:text-white transition-colors">
+            SERVE
+          </Link>
+        </div>
+        <div className="flex flex-col items-end gap-3 pointer-events-auto">
+          <Link href="/changelog" className="text-[9px] text-white/30 tracking-[0.2em] uppercase hover:text-white transition-colors">Changelog</Link>
+          <Link href="/privacy" className="text-[9px] text-white/30 tracking-[0.2em] uppercase hover:text-white transition-colors">Privacy</Link>
+          <Link href="/terms" className="text-[9px] text-white/30 tracking-[0.2em] uppercase hover:text-white transition-colors">Terms</Link>
+        </div>
+      </nav>
+
 
       {/* 3D Scene Background and Scroll Wrapper */}
       <Scene>
         <div className="w-full relative pointer-events-auto">
 
           {/* Section 1: Hero */}
-          <section className="h-[100vh] w-full flex flex-col items-center justify-center relative px-6">
+          <section className="h-[100dvh] w-full flex flex-col items-center justify-center relative px-6">
             <div className="text-center max-w-2xl mx-auto flex flex-col items-center">
               <div className="mb-12">
                 <img src="/logo.png" alt="SERVE" className="w-20 h-20 sm:w-28 sm:h-28 opacity-70 drop-shadow-[0_0_20px_rgba(255,255,255,0.1)] object-contain" />
@@ -38,7 +54,7 @@ export default function Home() {
           </section>
 
           {/* Section 2: Philosophy */}
-          <section className="h-[100vh] w-full flex items-center justify-center px-6 relative">
+          <section className="h-[100dvh] w-full flex items-center justify-center px-6 relative">
             <div className="max-w-xl w-full">
               <h2 className="text-[10px] text-white/30 tracking-[0.3em] mb-12 uppercase flex items-center gap-4">
                 <div className="w-8 h-[1px] bg-white/20"></div>
@@ -57,7 +73,7 @@ export default function Home() {
           </section>
 
           {/* Section 3: Memory */}
-          <section className="h-[100vh] w-full flex items-center justify-center px-6 relative">
+          <section className="h-[100dvh] w-full flex items-center justify-center px-6 relative">
             <div className="max-w-xl w-full text-right ml-auto mr-4 md:mr-24">
               <h2 className="text-[10px] text-white/30 tracking-[0.3em] mb-12 uppercase flex items-center justify-end gap-4">
                 Local Memory
@@ -76,7 +92,7 @@ export default function Home() {
           </section>
 
           {/* Section 4: Architecture */}
-          <section className="h-[100vh] w-full flex items-center justify-center px-6 relative">
+          <section className="h-[100dvh] w-full flex items-center justify-center px-6 relative">
              <div className="max-w-xl w-full">
               <h2 className="text-[10px] text-white/30 tracking-[0.3em] mb-12 uppercase flex items-center gap-4">
                 <div className="w-8 h-[1px] bg-white/20"></div>
@@ -95,7 +111,7 @@ export default function Home() {
           </section>
 
           {/* Section 5: CTA */}
-          <section className="h-[100vh] w-full flex flex-col items-center justify-center px-6 relative pointer-events-none">
+          <section className="h-[100dvh] w-full flex flex-col items-center justify-center px-6 relative pointer-events-none">
             <div className="max-w-2xl mx-auto text-center flex flex-col items-center pointer-events-auto">
               <h2 className="text-2xl md:text-4xl font-light mb-6 tracking-[0.2em] text-white/90">
                 Ready when you are.
@@ -113,18 +129,7 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Footer */}
-            <footer className="absolute bottom-8 w-full px-8 flex justify-between items-center text-[9px] text-white/20 tracking-widest uppercase pointer-events-auto">
-              <div className="flex gap-6">
-                <Link href="/privacy" className="hover:text-white/50 transition-colors">Privacy</Link>
-                <Link href="/terms" className="hover:text-white/50 transition-colors">Terms</Link>
-              </div>
-              <div className="flex items-center gap-3">
-                <span>SERVE</span>
-                <span className="w-1 h-1 rounded-full bg-white/20"></span>
-                <span>2026</span>
-              </div>
-            </footer>
+
           </section>
 
         </div>

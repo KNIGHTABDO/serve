@@ -5,12 +5,12 @@ import { Scene } from "../components/canvas/Scene";
 
 export default function Privacy() {
   return (
-    <div className="relative w-full min-h-screen bg-black overflow-hidden selection:bg-white/20 font-sans">
+    <div className="relative w-full min-h-[100dvh] bg-black overflow-hidden selection:bg-white/20 font-sans">
       <div className="noise z-50 mix-blend-overlay opacity-10 pointer-events-none fixed inset-0" />
 
       <Scene scrollPages={0} interactive={false} density={1500} speed={0.2} pulse={false} isBackground={true} />
 
-      <div className="relative z-10 w-full min-h-screen pointer-events-auto overflow-y-auto px-6 py-24 sm:py-32">
+      <div className="relative z-10 w-full min-h-[100dvh] pointer-events-auto overflow-y-auto px-6 py-24 sm:py-32">
         <div className="max-w-3xl mx-auto">
           <Link href="/" className="text-[10px] text-white/40 hover:text-white uppercase tracking-widest mb-16 inline-flex items-center gap-4 transition-colors">
             <div className="w-8 h-[1px] bg-white/20"></div>
