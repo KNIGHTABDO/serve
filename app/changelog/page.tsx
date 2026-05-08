@@ -1,101 +1,47 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
+import Link from "next/link";
+import { Scene } from "../components/canvas/Scene";
 
-export default function ChangelogPage() {
-  const router = useRouter();
-
-  const versions = [
-    {
-      version: '3.1.0',
-      date: 'April 2026',
-      title: 'The Anti-Wrapper',
-      changes: [
-        'Introduced the Anti-Wrapper Protocol — a deep system-prompt layer that prevents SERVE from ever sounding like a generic chatbot.',
-        'Each persona now carries its own rotating poetic placeholders that cycle in the empty state and input field.',
-        'Atmospheric empty state redesign: breathing logo animation, meditative cycling text, and a minimal "begin" anchor.',
-        'Persona selector moved below the input as a subtle, always-accessible dropdown — inspired by competitive analysis.',
-        'Strengthened identity protection: all personas now refuse emojis, corporate phrasing, and ChatGPT-style scaffolding.',
-        'Legal pages (Privacy, Terms) and Changelog added with full SERVE aesthetic and dynamic back-navigation.',
-        'Vercel deployment configuration finalized with security headers.',
-      ]
-    },
-    {
-      version: '3.0.0',
-      date: 'April 2026',
-      title: 'The Great Unbinding',
-      changes: [
-        'Complete architectural rewrite moving from Tauri native to the modern web.',
-        'Conversations and Workspaces are now persisted lightning-fast in the browser via IndexedDB.',
-        'Device-agnostic flow allows usage on mobile, iPad, and any modern browser.',
-        'Directory parsing now leverages webkitdirectory for seamless local file ingestion.',
-        'Added server-side proxy routes for GitHub Copilot, ensuring secure CORS-compliant completions.',
-        'Responsive layout redesign for the main chat interface.',
-        'Sunset Native SQLite database and Native Window controls.'
-      ]
-    },
-    {
-      version: '2.1.0',
-      date: 'February 2026',
-      title: 'The Reliquary',
-      changes: [
-        'Added "The Reliquary" for crystallized insights and artifact generation.',
-        'Overhauled the persona matrix introducing "The Mirror", "The Void", and "The Scribe".',
-        'Implemented structural Markdown support for dynamic UI injection.',
-        'Added "Focus" sub-menu for quoting text and returning it to context.'
-      ]
-    },
-    {
-      version: '2.0.0',
-      date: 'January 2026',
-      title: 'Resonance',
-      changes: [
-        'Introduced the Procedural Audio Resonance Engine running on the Web Audio API.',
-        'Integrated Xenova/all-MiniLM-L6-v2 ONNX embeddings for hyper-local memory context.',
-        'Redesigned the Workspace grounding engine.'
-      ]
-    },
-    {
-      version: '1.0.0',
-      date: 'December 2025',
-      title: 'Genesis',
-      changes: [
-        'Initial release of SERVE for Desktop.',
-        'Integration with GitHub Copilot Device Flow.',
-        'Cinematic UI framework and foundational SQLite schema established.'
-      ]
-    }
-  ];
-
+export default function Changelog() {
   return (
-    <div className="h-screen overflow-y-auto bg-[#0a0a0a] text-white selection:bg-white/10 font-sans">
-      <div className="max-w-2xl mx-auto px-6 py-24 sm:py-32">
-        <button onClick={() => router.back()} className="text-xs text-white/40 hover:text-white uppercase tracking-widest transition-colors mb-16 inline-block">
-          ← Back
-        </button>
-        
-        <h1 className="text-3xl font-light mb-12 tracking-wide">Changelog</h1>
-        
-        <div className="space-y-16">
-          {versions.map((v) => (
-            <div key={v.version} className="relative pl-6 sm:pl-8 border-l border-white/5">
-              <div className="absolute top-1.5 -left-[3px] w-1.5 h-1.5 bg-white/40 rounded-full" />
-              
-              <div className="flex items-baseline justify-between mb-2">
-                <h2 className="text-lg font-medium text-white/90">{v.version} — {v.title}</h2>
-                <span className="text-xs text-white/30 italic">{v.date}</span>
-              </div>
-              
-              <ul className="space-y-3 mt-6">
-                {v.changes.map((change, i) => (
-                  <li key={i} className="text-sm text-white/50 leading-relaxed flex gap-3">
-                    <span className="text-white/20 select-none">•</span>
-                    <span>{change}</span>
-                  </li>
-                ))}
+    <div className="relative w-full min-h-[100dvh] bg-black overflow-hidden selection:bg-white/20 font-sans">
+      <div className="noise z-50 mix-blend-overlay opacity-10 pointer-events-none fixed inset-0" />
+
+      <Scene scrollPages={0} interactive={false} density={1500} speed={0.2} pulse={false} isBackground={true} />
+
+      <div className="relative z-10 w-full min-h-[100dvh] pointer-events-auto overflow-y-auto px-6 py-24 sm:py-32">
+        <div className="max-w-3xl mx-auto">
+          <Link href="/" className="text-[10px] text-white/40 hover:text-white uppercase tracking-widest mb-16 inline-flex items-center gap-4 transition-colors">
+            <div className="w-8 h-[1px] bg-white/20"></div>
+            Return
+          </Link>
+
+          <h1 className="text-3xl md:text-5xl font-light text-white/90 tracking-wide mb-16">
+            Changelog
+          </h1>
+
+          <div className="space-y-16 border-l border-white/10 pl-6 md:pl-8">
+            <section className="group">
+              <h2 className="text-[10px] text-white/40 tracking-[0.3em] uppercase mb-4">Version 3.1.0 — Now</h2>
+              <h3 className="text-white/90 text-xl md:text-2xl font-light mb-4 tracking-wide group-hover:text-white transition-colors">The Atmospheric Update</h3>
+              <ul className="space-y-4 text-sm md:text-base font-light text-white/60 leading-relaxed list-none p-0 m-0">
+                <li className="relative before:content-[''] before:absolute before:left-[-1.5rem] before:top-2.5 before:w-1 before:h-1 before:bg-white/20 before:rounded-full">Complete redesign of the landing experience.</li>
+                <li className="relative before:content-[''] before:absolute before:left-[-1.5rem] before:top-2.5 before:w-1 before:h-1 before:bg-white/20 before:rounded-full">Integration of subtle 3D environments to enhance the sense of presence.</li>
+                <li className="relative before:content-[''] before:absolute before:left-[-1.5rem] before:top-2.5 before:w-1 before:h-1 before:bg-white/20 before:rounded-full">Improved mobile responsiveness for input fields and selectors.</li>
               </ul>
-            </div>
-          ))}
+            </section>
+
+            <section className="group opacity-70">
+              <h2 className="text-[10px] text-white/40 tracking-[0.3em] uppercase mb-4">Version 3.0.0</h2>
+              <h3 className="text-white/90 text-xl md:text-2xl font-light mb-4 tracking-wide group-hover:text-white transition-colors">The Shift to Web</h3>
+              <ul className="space-y-4 text-sm md:text-base font-light text-white/60 leading-relaxed list-none p-0 m-0">
+                <li className="relative before:content-[''] before:absolute before:left-[-1.5rem] before:top-2.5 before:w-1 before:h-1 before:bg-white/20 before:rounded-full">Transitioned from Tauri Desktop to a fully client-side Next.js Web Application.</li>
+                <li className="relative before:content-[''] before:absolute before:left-[-1.5rem] before:top-2.5 before:w-1 before:h-1 before:bg-white/20 before:rounded-full">Introduced entirely in-browser semantic search via IndexedDB and ONNX embeddings.</li>
+                <li className="relative before:content-[''] before:absolute before:left-[-1.5rem] before:top-2.5 before:w-1 before:h-1 before:bg-white/20 before:rounded-full">Added Copilot Device Flow authentication.</li>
+              </ul>
+            </section>
+          </div>
         </div>
       </div>
     </div>

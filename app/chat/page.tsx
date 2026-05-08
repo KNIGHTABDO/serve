@@ -1284,7 +1284,7 @@ export default function ChatPage() {
             <div className="relative">
               <textarea
                 ref={inputRef}
-                className={`w-full bg-transparent border rounded-lg pl-4 pr-12 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-all resize-none overflow-hidden weight-glow ${getDisciplineInputClass(disciplineMode)} ${getWeightBorderClass(weightResult)} ${getWeightShadowClass(weightResult)}`}
+                className={`w-full bg-transparent border rounded-lg pl-4 pr-12 py-3 text-base text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-all resize-none overflow-hidden weight-glow ${getDisciplineInputClass(disciplineMode)} ${getWeightBorderClass(weightResult)} ${getWeightShadowClass(weightResult)}`}
                 placeholder={getDisciplinePlaceholder(
                   getPersona(selectedPersona).placeholder[placeholderIndex % getPersona(selectedPersona).placeholder.length],
                   disciplineMode
