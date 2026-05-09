@@ -476,8 +476,8 @@ export default function ChatPage() {
     setIsIngesting(true);
     try {
       const files = await ingestDirectory();
+      const { generateEmbedding } = await import('@/lib/embeddings');
       for (const file of files) {
-        const { generateEmbedding } = await import('@/lib/embeddings');
         const embedding = await generateEmbedding(file.content.slice(0, 5000));
         await db.addFileToWorkspace(currentWorkspaceId, file.name, file.path, file.content, embedding || []);
       }
@@ -498,8 +498,8 @@ export default function ChatPage() {
     setIsIngesting(true);
     try {
       const files = await ingestFiles();
+      const { generateEmbedding } = await import('@/lib/embeddings');
       for (const file of files) {
-        const { generateEmbedding } = await import('@/lib/embeddings');
         const embedding = await generateEmbedding(file.content.slice(0, 5000));
         await db.addFileToWorkspace(currentWorkspaceId, file.name, file.path, file.content, embedding || []);
       }
