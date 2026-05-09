@@ -5,19 +5,26 @@
  * Run with: node scripts/dependency-health.js
  */
 
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const PKG_PATH = path.join(ROOT, 'package.json');
 
-function run(cmd) {
-  try {
-    return execSync(cmd, { cwd: ROOT, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-  } catch (e) {
-    return e.stdout || e.stderr || '';
+function run(cmd, args = []) {
+  const actualCmd = process.platform === 'win32' && cmd === 'npm' ? 'npm.cmd' : cmd;
+  const result = spawnSync(actualCmd, args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+
+  if (result.error) {
+    return '';
   }
+
+  return result.stdout || result.stderr || '';
 }
 
 function color(label, text) {
@@ -66,7 +73,7 @@ function main() {
 
   // Outdated check
   console.log(color('cyan', '--- Outdated Dependencies ---'));
-  const outdatedRaw = run('npm outdated --parseable 2>/dev/null || npm outdated');
+  const outdatedRaw = run('npm', ['outdated']);
   const outdated = parseOutdated(outdatedRaw);
 
   if (outdated.length === 0) {
@@ -83,7 +90,7 @@ function main() {
 
   // Audit check
   console.log(color('cyan', '--- Security Audit ---'));
-  const auditRaw = run('npm audit --json');
+  const auditRaw = run('npm', ['audit', '--json']);
   let audit = { metadata: { vulnerabilities: { total: 0 } } };
   try {
     audit = JSON.parse(auditRaw);
