@@ -20,7 +20,6 @@ import { ingestDirectory, ingestFiles } from '@/lib/fs';
 
 // Aesthetic utilities
 import {
-  getSilenceBetween,
   formatPoeticTimestamp,
   formatPoeticTimeAgo,
   isEphemeralEnabled,
@@ -34,8 +33,6 @@ import {
   getDisciplinePlaceholder,
   getDisciplineInputClass,
   getDisciplineWarning,
-  violatesOneSentence,
-  violates140Chars,
   type DisciplineMode,
 } from '@/lib/aesthetics';
 
