@@ -1,0 +1,88 @@
+{
+  "theme": "Dark",
+  "archetype": "5 (Jewel & Luxury - Cinematic & Atmospheric variant)",
+  "colors": {
+    "background": "#0C0C0D",
+    "surface": "#111012",
+    "accent": "#C49A3C",
+    "text_primary": "#EDE8DF",
+    "text_secondary": "rgba(237, 232, 223, 0.6)",
+    "border_subtle": "rgba(196, 154, 60, 0.2)",
+    "border_accent": "#C49A3C"
+  },
+  "typography": {
+    "heading": "Cormorant Garamond, serif",
+    "body": "DM Sans, sans-serif",
+    "monospace": "JetBrains Mono, monospace",
+    "notes": "No Inter, no Space Grotesk. High-contrast editorial serif for display, warm grotesque for body."
+  },
+  "textures_and_effects": {
+    "global_grain": "SVG noise filter overlaid globally with mix-blend-mode at 4% opacity.",
+    "hero_grain": "7% SVG noise opacity in hero section + scanline pattern texture overlay.",
+    "shadows": "NO colored box-shadows. Depth achieved via borders, opacity, and parallax.",
+    "borders": "1px outlines, amber halos. Monospace pills have 1px amber border and faint amber bg (rgba(196, 154, 60, 0.05)).",
+    "blur": "Progressive global backdrop-blur as user scrolls past 80% of page height."
+  },
+  "motion": {
+    "easing": "cubic-bezier(0.25, 1, 0.5, 1)",
+    "fade_up": "whileInView { y: 24, opacity: 0 } -> { y: 0, opacity: 1 }, transition: { duration: 0.6, ease: 'easeOut' }",
+    "stagger_fast": "80ms for feature cards.",
+    "stagger_slow": "150ms for triptych words.",
+    "letter_reveal": "40ms stagger for monospace sublines.",
+    "parallax": "Background layer 0.3x, topographic/mid layer 0.6x, foreground 1x."
+  },
+  "copy_tone": {
+    "style": "Novelist-who-ships-software. Short sentences. No bullets. No exclamation marks.",
+    "forbidden_words": ["powerful", "seamless", "intuitive", "unlock", "supercharge"]
+  },
+  "media": {
+    "image_urls": {
+      "avatar_placeholder": {
+        "url": "https://images.unsplash.com/photo-1581197326868-51cafbd1a169?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwYXJ0aXN0aWMlMjBzaWxob3VldHRlJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzc5MDI1NjI5fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Artistic silhouette portrait for @jip7e avatar",
+        "category": "team"
+      }
+    }
+  },
+  "sections": [
+    {
+      "name": "Atmospheric Loader",
+      "details": "Single pulsing amber dot (#C49A3C) in center of dark screen. Max 1.2s duration. Full page fade-in afterwards. No progress bar."
+    },
+    {
+      "name": "Hero",
+      "details": "Full-viewport height. Giant 'SERVE' serif wordmark (near-black #111012 on near-black #0C0C0D background) revealed by a slow vertical light-sweep mask animation. Monospace subline 'not a tool. a room.' appearing letter-by-letter below. Drifting amber gradient orb (off-center bottom-left, absolute positioned, animating 6px upward in a 12s loop). Late-fade navbar appearing 0.8s after load. Scroll indicator: thin vertical line + chevron at bottom center fading in at 2s."
+    },
+    {
+      "name": "Editorial Manifesto",
+      "details": "60/40 split layout. Large italic pull-quote on left (sliding in from left-margin). Rotated 90-degree watermark text 'UTILITY VS. PRESENCE' anchored to the right side."
+    },
+    {
+      "name": "The Room",
+      "details": "Core concept section. Serif headline. Triptych of words: 'Somber.', 'Warm.', 'Dark.' rendered in amber-gold, staggered entrance at 150ms each."
+    },
+    {
+      "name": "Feature Trio",
+      "details": "Three stacked horizontal rows. Each row contains a monospace number label, sharp copy, and a hand-coded abstract SVG glyph (Row 1: waveform, Row 2: node cluster, Row 3: spiral). Interaction: hover-lift effect on the row with the amber label glowing."
+    },
+    {
+      "name": "Memory Ritual (Local-First)",
+      "details": "Full-width canvas layout. Floating amber-bordered quote fragments positioned abstractly. Connected by SVG thread lines using `stroke-dashoffset` driven by scroll progress. Implements parallax depth split: background 0.3x, mid-layer lines 0.6x, foreground quotes 1x."
+    },
+    {
+      "name": "Open Source",
+      "details": "Card with 1px amber border. Fetches live GitHub star count client-side from api.github.com/repos/knightabdo/serve. Includes a ghost CTA 'View Source \u2192'."
+    },
+    {
+      "name": "Built By",
+      "details": "Minimalist block. 48px amber-ring avatar (use avatar_placeholder). '@jip7e' in monospace. X (Twitter) icon link. One-line bio: 'novelist who ships software.'"
+    },
+    {
+      "name": "Footer",
+      "details": "Single centered line of text. Max grain intensity applied to background. E.g., '\u00a9 2026 SERVE. Local-first reflection.'"
+    }
+  ],
+  "testing": {
+    "requirements": "All interactive and key informational elements MUST include a data-testid attribute in kebab-case."
+  }
+}
