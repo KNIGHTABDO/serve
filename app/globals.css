@@ -51,6 +51,7 @@ html, body {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
 }
 
 ::selection {
@@ -188,7 +189,7 @@ html, body {
 }
 
 /* ─── Drop-cap helper for editorial section ──────────────── */
-.editorial-body p::first-letter {
+.editorial-body p:first-of-type::first-letter {
   font-family: var(--font-serif);
   font-size: 2.1em;
   font-style: italic;

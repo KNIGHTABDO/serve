@@ -728,7 +728,7 @@ export default function ChatPage() {
   if (loadingAuth) return <div className="bg-[#0a0a0a] h-screen w-screen flex items-center justify-center text-white/20 text-sm">initializing...</div>;
 
   return (
-    <div className="flex h-full bg-[#0a0a0a] text-white selection:bg-white/10 overflow-hidden">
+    <div className="flex h-[100dvh] w-full bg-[#0a0a0a] text-white selection:bg-white/10 overflow-hidden">
       {!authenticated && <AuthModal onAuthenticated={() => setAuthenticated(true)} />}
 
       {/* The Clearing overlay */}
@@ -1384,7 +1384,7 @@ export default function ChatPage() {
           aria-modal="true"
           aria-labelledby="settings-modal-title"
         >
-          <div className="bg-[#111] border border-white/10 rounded-xl w-full max-w-md p-4">
+          <div className="bg-[#111] border border-white/10 rounded-xl w-full max-w-md p-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-4">
               <h2 id="settings-modal-title" className="text-base font-light">Settings</h2>
               <button

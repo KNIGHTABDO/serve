@@ -19,6 +19,7 @@ import {
   ArrowRight,
   ChevronDown,
 } from './components/Glyphs';
+import { Menu, X } from 'lucide-react';
 
 const REPO = 'knightabdo/serve';
 
@@ -27,6 +28,7 @@ export default function Home() {
   const [loaderDone, setLoaderDone] = useState(false);
   const [navVisible, setNavVisible] = useState(false);
   const [stars, setStars] = useState<number | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const t1 = setTimeout(() => setLoaderDone(true), 1200);
@@ -74,6 +76,112 @@ export default function Home() {
       <div className="grain-overlay" aria-hidden="true" />
       <GlobalBlur />
 
+      {/* ─── Mobile Menu Drawer ─────────────────────────── */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            key="mobile-menu"
+            initial={{ opacity: 0, y: '-100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '-100%' }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-0 z-[80] flex flex-col justify-between bg-[#0C0C0D]/98 backdrop-blur-xl p-8 pt-24 pointer-events-auto"
+            data-testid="mobile-menu-overlay"
+          >
+            {/* Ambient amber orbs for depth */}
+            <div className="absolute top-[20%] left-[10%] w-[180px] h-[180px] rounded-full bg-[#C49A3C]/5 blur-[80px] pointer-events-none" />
+            <div className="absolute bottom-[20%] right-[10%] w-[220px] h-[220px] rounded-full bg-[#C49A3C]/3 blur-[100px] pointer-events-none" />
+            
+            {/* Header close button */}
+            <div className="absolute top-6 right-6 z-[90]">
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-3 text-[#EDE8DF]/50 hover:text-[#C49A3C] transition-colors cursor-pointer"
+                aria-label="Close navigation menu"
+                data-testid="mobile-menu-close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Menu Links with stagger animations */}
+            <div className="flex flex-col gap-6 mt-8">
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
+                }}
+                className="flex flex-col gap-5"
+              >
+                {[
+                  { label: 'Manifesto', href: '#manifesto', isAnchor: true },
+                  { label: 'Pillars', href: '#pillars', isAnchor: true },
+                  { label: 'Source', href: '#source', isAnchor: true },
+                  { label: 'Changelog', href: '/changelog', isAnchor: false },
+                  { label: 'Privacy', href: '/privacy', isAnchor: false },
+                  { label: 'Terms', href: '/terms', isAnchor: false },
+                ].map((item) => (
+                  <motion.div
+                    key={item.label}
+                    variants={{
+                      hidden: { opacity: 0, y: 15 },
+                      visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+                    }}
+                    className="border-b border-[#C49A3C]/10 pb-3"
+                  >
+                    {item.isAnchor ? (
+                      <a
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="font-mono text-lg tracking-[0.2em] uppercase text-[#EDE8DF]/70 hover:text-[#EDE8DF] transition-colors block"
+                        data-testid={`mobile-link-${item.label.toLowerCase()}`}
+                      >
+                        {item.label}
+                      </a>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="font-mono text-lg tracking-[0.2em] uppercase text-[#EDE8DF]/70 hover:text-[#EDE8DF] transition-colors block"
+                        data-testid={`mobile-link-${item.label.toLowerCase()}`}
+                      >
+                        {item.label}
+                      </Link>
+                    )}
+                  </motion.div>
+                ))}
+
+                {/* Enter Room styled with a gold pulse/glow */}
+                <motion.div
+                  variants={{
+                    hidden: { opacity: 0, y: 15 },
+                    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+                  }}
+                  className="mt-6 animate-pulse"
+                >
+                  <Link
+                    href="/chat"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="relative font-mono text-base tracking-[0.25em] uppercase text-[#0C0C0D] bg-[#C49A3C] hover:bg-[#EDE8DF] transition-all duration-300 py-4 px-6 text-center block rounded-[2px] shadow-[0_0_20px_rgba(196,154,60,0.3)] hover:shadow-[0_0_30px_rgba(237,232,223,0.5)] font-semibold"
+                    data-testid="mobile-link-enter"
+                  >
+                    Enter Room
+                  </Link>
+                </motion.div>
+              </motion.div>
+            </div>
+
+            {/* Footer block in drawer */}
+            <div className="border-t border-[#C49A3C]/10 pt-6">
+              <span className="font-mono text-[9px] tracking-[0.3em] uppercase text-[#EDE8DF]/30 block text-center">
+                SERVE © 2026 · LOCAL-FIRST
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ─── Nav (fades in 0.8s after loader) ───────────── */}
       <motion.nav
         className="fixed top-0 left-0 right-0 z-[60] px-6 md:px-10 py-6 flex items-center justify-between pointer-events-none"
@@ -91,16 +199,18 @@ export default function Home() {
             SERVE
           </span>
         </div>
-        <div className="pointer-events-auto hidden md:flex items-center gap-8">
-          <a href="#manifesto" className="font-mono text-[10px] tracking-[0.25em] uppercase text-[#EDE8DF]/40 hover:text-[#EDE8DF] transition-colors" data-testid="nav-manifesto">
-            Manifesto
-          </a>
-          <a href="#pillars" className="font-mono text-[10px] tracking-[0.25em] uppercase text-[#EDE8DF]/40 hover:text-[#EDE8DF] transition-colors" data-testid="nav-pillars">
-            Pillars
-          </a>
-          <a href="#source" className="font-mono text-[10px] tracking-[0.25em] uppercase text-[#EDE8DF]/40 hover:text-[#EDE8DF] transition-colors" data-testid="nav-source">
-            Source
-          </a>
+        <div className="pointer-events-auto flex items-center gap-6 md:gap-8">
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#manifesto" className="font-mono text-[10px] tracking-[0.25em] uppercase text-[#EDE8DF]/40 hover:text-[#EDE8DF] transition-colors" data-testid="nav-manifesto">
+              Manifesto
+            </a>
+            <a href="#pillars" className="font-mono text-[10px] tracking-[0.25em] uppercase text-[#EDE8DF]/40 hover:text-[#EDE8DF] transition-colors" data-testid="nav-pillars">
+              Pillars
+            </a>
+            <a href="#source" className="font-mono text-[10px] tracking-[0.25em] uppercase text-[#EDE8DF]/40 hover:text-[#EDE8DF] transition-colors" data-testid="nav-source">
+              Source
+            </a>
+          </div>
           <Link
             href="/chat"
             className="font-mono text-[10px] tracking-[0.25em] uppercase text-[#EDE8DF]/65 hover:text-[#C49A3C] transition-colors flex items-center gap-2"
@@ -109,16 +219,26 @@ export default function Home() {
             Enter
             <span className="block w-4 h-px bg-current" />
           </Link>
-          <a
-            href={`https://github.com/${REPO}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-mono text-[10px] tracking-[0.25em] uppercase text-[#C49A3C] hover:text-[#EDE8DF] transition-colors flex items-center gap-2"
-            data-testid="nav-github"
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="md:hidden font-mono text-[10px] tracking-[0.25em] uppercase text-[#EDE8DF]/65 hover:text-[#C49A3C] transition-colors flex items-center gap-1.5 p-1 cursor-pointer pointer-events-auto"
+            aria-label="Open menu"
+            data-testid="mobile-menu-trigger"
           >
-            <GitHubIcon className="w-3 h-3" />
-            GitHub
-          </a>
+            <Menu className="w-4 h-4 text-[#EDE8DF]" />
+          </button>
+          <div className="hidden md:flex items-center gap-8">
+            <a
+              href={`https://github.com/${REPO}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[10px] tracking-[0.25em] uppercase text-[#C49A3C] hover:text-[#EDE8DF] transition-colors flex items-center gap-2"
+              data-testid="nav-github"
+            >
+              <GitHubIcon className="w-3 h-3" />
+              GitHub
+            </a>
+          </div>
         </div>
       </motion.nav>
 
@@ -541,6 +661,31 @@ export default function Home() {
         <div className="relative flex flex-col items-center gap-4">
           <div className="font-mono text-[10px] tracking-[0.35em] uppercase text-[#EDE8DF]/30">
             SERVE © 2026 — local-first, always.
+          </div>
+          <div className="flex items-center gap-6 font-mono text-[10px] tracking-[0.2em] uppercase">
+            <Link
+              href="/changelog"
+              className="text-[#EDE8DF]/35 hover:text-[#C49A3C] transition-colors"
+              data-testid="footer-changelog"
+            >
+              Changelog
+            </Link>
+            <span className="text-[#EDE8DF]/15">·</span>
+            <Link
+              href="/privacy"
+              className="text-[#EDE8DF]/35 hover:text-[#C49A3C] transition-colors"
+              data-testid="footer-privacy"
+            >
+              Privacy Policy
+            </Link>
+            <span className="text-[#EDE8DF]/15">·</span>
+            <Link
+              href="/terms"
+              className="text-[#EDE8DF]/35 hover:text-[#C49A3C] transition-colors"
+              data-testid="footer-terms"
+            >
+              Terms of Service
+            </Link>
           </div>
           <div className="flex items-center gap-6 font-mono text-[10px] tracking-[0.2em] uppercase">
             <a
